@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTURN Sheets — Spreadsheets</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Calibri', 'Arial', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        sheets: {
+                            green: '#107c41',
+                            bright: '#0f9d58',
+                            light: '#e6f4ea',
+                            chrome: '#f9fbfd',
+                            toolbar: '#edf2fa',
+                            shelf: '#f1f3f4',
+                            active: '#1a73e8',
+                            headerActive: '#d3e3fd',
+                            border: '#e1e3e1'
+                        },
+                        plum: {
+                            DEFAULT: '#714B67',
+                            hover: '#5d3d54'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #ffffff;
+            color: #1f1f1f;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Spreadsheet Grid Table Styling (Matches Google Sheets / Excel Crisp Look) */
+        .sheet-grid-container {
+            position: relative;
+            overflow: auto;
+            background-color: #f8f9fa;
+            user-select: none;
+        }
+
+        table.spreadsheet-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+            background-color: #ffffff;
+        }
+
+        /* Corner Select-All Box */
+        th.corner-header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 30;
+            width: 46px;
+            min-width: 46px;
+            height: 26px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #c7c7c7;
+            border-bottom: 1px solid #c7c7c7;
+        }
+
+        /* Column Headers (A, B, C...) */
+        th.col-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            width: 110px;
+            min-width: 110px;
+            height: 26px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #e1e3e1;
+            border-bottom: 1px solid #c7c7c7;
+            font-size: 12px;
+            font-weight: 500;
+            color: #444746;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        th.col-header.active-header,
+        th.row-header.active-header {
+            background-color: #d3e3fd !important;
+            color: #0b57d0 !important;
+            font-weight: 600;
+        }
+
+        /* Row Headers (1, 2, 3...) */
+        th.row-header {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            width: 46px;
+            min-width: 46px;
+            height: 24px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #c7c7c7;
+            border-bottom: 1px solid #e1e3e1;
+            font-size: 11px;
+            font-weight: 500;
+            color: #444746;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+
+        /* Individual Spreadsheet Cells */
+        td.sheet-cell {
+            width: 110px;
+            min-width: 110px;
+            height: 24px;
+            border-right: 1px solid #e1e3e1;
+            border-bottom: 1px solid #e1e3e1;
+            padding: 2px 6px;
+            font-size: 13px;
+            color: #1f1f1f;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            cursor: cell;
+            position: relative;
+            background-color: #ffffff;
+        }
+
+        .hide-gridlines td.sheet-cell {
+            border-right-color: transparent;
+            border-bottom-color: transparent;
+        }
+
+        /* Selected Active Cell (#1a73e8 Blue Box + Fill Handle Dot) */
+        td.sheet-cell.active-cell {
+            outline: 2px solid #1a73e8 !important;
+            outline-offset: -2px;
+            z-index: 10;
+        }
+
+        td.sheet-cell.active-cell::after {
+            content: "";
+            position: absolute;
+            right: -3px;
+            bottom: -3px;
+            width: 6px;
+            height: 6px;
+            background-color: #1a73e8;
+            border: 1px solid #ffffff;
+            cursor: crosshair;
+            z-index: 15;
+        }
+
+        /* Multi-Cell Range Highlight */
+        td.sheet-cell.in-range {
+            background-color: rgba(26, 115, 232, 0.10) !important;
+        }
+
+        /* In-Cell Direct Input Editor */
+        input.cell-inline-editor {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: 2px solid #1a73e8;
+            padding: 2px 6px;
+            font-size: inherit;
+            font-family: inherit;
+            background: #ffffff;
+            color: #1f1f1f;
+            z-index: 25;
+        }
+
+        /* Template Card Hover Effects */
+        .template-card-preview {
+            height: 126px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            background: #ffffff;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .template-card:hover .template-card-preview {
+            border-color: #0f9d58;
+            box-shadow: 0 2px 8px rgba(15, 157, 88, 0.14);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f3f4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c6cc;
+            border-radius: 5px;
+            border: 2px solid #f1f3f4;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9aa0a6;
+        }
+
+        /* Dropdown Menu Styling */
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 210px;
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            padding: 6px 0;
+            z-index: 50;
+        }
+
+        .menu-item-wrapper.open .menu-dropdown {
+            display: block;
+        }
+
+        /* Column Resizer Handle */
+        .col-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 10;
+        }
+        .col-resizer:hover, .col-resizer.resizing {
+            background-color: #1a73e8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- =========================================================================
+         VIEW 1: SHEETS HOME DASHBOARD (MATCHES GOOGLE SHEETS HOME SCREENSHOT)
+         ========================================================================= -->
+    <div id="dashboardView" class="min-h-screen flex flex-col bg-white">
+
+        <!-- Top Navigation Header -->
+        <header class="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white sticky top-0 z-30">
+            <!-- Left: Sheets Brand + NTURN Projects Button (No Arrow) -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="switchView('dashboard')">
+                    <!-- Crisp Green Sheets Icon -->
+                    <div class="w-9 h-9 rounded-lg bg-[#0f9d58] flex items-center justify-center text-white shadow-2xs">
+                        <i class="fa-solid fa-table-cells text-lg"></i>
+                    </div>
+                    <span class="text-[21px] font-medium text-[#444746] tracking-tight">Sheets</span>
+                </div>
+
+                <!-- Divider -->
+                <span class="h-5 w-[1px] bg-slate-200 mx-0.5"></span>
+
+                <!-- NTURN Projects Button (NO ARROW, Uses Plus/Grid Badge) -->
+                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-plum hover:bg-plum-hover shadow-2xs transition" title="Open NTURN Projects Home">
+                    <span class="text-amber-300 text-xs">➕</span>
+                    <span>NTURN Projects</span>
+                </a>
+            </div>
+
+            <!-- Center: Pill Search Box (Matches Screenshot) -->
+            <div class="flex-1 max-w-2xl mx-2">
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 text-slate-500 text-sm"></i>
+                    <input 
+                        type="text" 
+                        id="dashboardSearchInput" 
+                        oninput="renderRecentSpreadsheets()" 
+                        placeholder="Search" 
+                        class="w-full pl-11 pr-10 py-2.5 bg-[#f1f3f4] focus:bg-white border border-transparent focus:border-slate-300 rounded-full text-sm text-slate-800 focus:outline-none focus:shadow-md transition"
+                    >
+                    <button onclick="clearDashboardSearch()" id="clearSearchBtn" class="hidden absolute right-3.5 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Quick New Blank (➕) & Backup Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="createNewSpreadsheet('blank')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#e6f4ea] hover:bg-[#ceead6] text-[#137333] font-semibold text-xs sm:text-sm transition">
+                    <span>➕</span>
+                    <span class="hidden sm:inline">New Sheet</span>
+                </button>
+
+                <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 cursor-pointer transition" title="Import a .CSV or .JSON file">
+                    <i class="fa-solid fa-upload text-[#0f9d58]"></i>
+                    <span class="hidden md:inline">Import</span>
+                    <input type="file" accept=".csv,.json" class="hidden" onchange="importSpreadsheetFile(event)">
+                </label>
+
+                <button onclick="exportAllSheetsBackup()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition" title="Export all NTURN Sheets as a backup .JSON file">
+                    <i class="fa-solid fa-download text-plum"></i>
+                    <span class="hidden md:inline">Backup</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Template Gallery Strip (#f1f3f4 Background — Matches Screenshot 3) -->
+        <section class="bg-[#f1f3f4] py-5 px-4 sm:px-8 border-b border-slate-200/80">
+            <div class="max-w-5xl mx-auto">
+                <!-- Header Row -->
+                <div class="flex items-center justify-between mb-3.5 text-sm text-[#202124]">
+                    <span class="font-medium">Start a new spreadsheet</span>
+                    <div class="flex items-center gap-2 text-xs text-slate-600">
+                        <span class="px-2.5 py-1 rounded hover:bg-slate-200/70 font-medium cursor-pointer" onclick="createNewSpreadsheet('blank')">
+                            ➕ Template gallery
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 6 Visual Template Cards (Matches Screenshot 3) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                    
+                    <!-- Card 1: Blank Spreadsheet with Plus Sign -->
+                    <div onclick="createNewSpreadsheet('blank')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview flex items-center justify-center">
+                            <!-- Iconic Multi-Color / Green Plus Sign -->
+                            <svg class="w-14 h-14 transition transform group-hover:scale-110" viewBox="0 0 56 56" fill="none">
+                                <rect x="24" y="10" width="8" height="16" fill="#EA4335"/>
+                                <rect x="24" y="26" width="8" height="20" fill="#34A853"/>
+                                <rect x="10" y="24" width="16" height="8" fill="#FBBC04"/>
+                                <rect x="26" y="24" width="20" height="8" fill="#4285F4"/>
+                                <rect x="24" y="24" width="8" height="8" fill="#0F9D58"/>
+                            </svg>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">Blank spreadsheet</p>
+                    </div>
+
+                    <!-- Card 2: To-do list -->
+                    <div onclick="createNewSpreadsheet('todo')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview p-2.5 flex flex-col justify-between">
+                            <div class="h-5 bg-[#0f9d58] rounded-xs px-2 flex items-center">
+                                <span class="text-[9px] text-white font-bold tracking-wider">TO DO LIST</span>
+                            </div>
+                            <div class="space-y-1.5 my-auto">
+                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 border border-emerald-600 rounded-xs bg-emerald-100"></span><div class="h-1.5 bg-slate-200 rounded w-3/4"></div></div>
+                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 border border-slate-300 rounded-xs"></span><div class="h-1.5 bg-slate-200 rounded w-2/3"></div></div>
+                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 border border-slate-300 rounded-xs"></span><div class="h-1.5 bg-slate-200 rounded w-4/5"></div></div>
+                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 border border-slate-300 rounded-xs"></span><div class="h-1.5 bg-slate-200 rounded w-1/2"></div></div>
+                            </div>
+                            <div class="h-1 bg-emerald-500/30 rounded"></div>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">To-do list</p>
+                    </div>
+
+                    <!-- Card 3: Annual budget -->
+                    <div onclick="createNewSpreadsheet('annual_budget')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview p-2.5 flex flex-col justify-between">
+                            <div class="border-b-2 border-orange-500 pb-1">
+                                <div class="text-[8px] font-bold text-orange-600">ANNUAL BUDGET TRACKER</div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-1 my-1">
+                                <div class="h-6 bg-orange-50 border border-orange-200 rounded-xs"></div>
+                                <div class="h-6 bg-emerald-50 border border-emerald-200 rounded-xs"></div>
+                                <div class="h-6 bg-sky-50 border border-sky-200 rounded-xs"></div>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="h-1.5 bg-slate-200 rounded w-full"></div>
+                                <div class="h-1.5 bg-slate-200 rounded w-5/6"></div>
+                                <div class="h-1.5 bg-slate-200 rounded w-4/6"></div>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">Annual budget</p>
+                    </div>
+
+                    <!-- Card 4: Monthly budget -->
+                    <div onclick="createNewSpreadsheet('monthly_budget')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview p-2.5 flex flex-col justify-between">
+                            <div class="h-4 bg-slate-800 rounded-xs px-1.5 flex items-center">
+                                <span class="text-[8px] text-white font-semibold">Monthly Budget</span>
+                            </div>
+                            <div class="flex items-end gap-1.5 h-12 px-2 pt-2">
+                                <div class="w-4 bg-orange-400 h-8 rounded-t-xs"></div>
+                                <div class="w-4 bg-slate-400 h-10 rounded-t-xs"></div>
+                                <div class="flex-1 bg-slate-100 h-10 rounded-xs p-1 flex flex-col justify-center">
+                                    <span class="text-[7px] text-slate-500">+30%</span>
+                                    <span class="text-[8px] font-bold text-slate-700">$2,450</span>
+                                </div>
+                            </div>
+                            <div class="h-1.5 bg-slate-200 rounded w-full"></div>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">Monthly budget</p>
+                    </div>
+
+                    <!-- Card 5: Employee List Tracker -->
+                    <div onclick="createNewSpreadsheet('employee_list')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview p-2.5 flex flex-col justify-between">
+                            <div class="h-4 bg-[#4285f4] rounded-xs px-1.5 flex items-center">
+                                <span class="text-[8px] text-white font-semibold">Employee List</span>
+                            </div>
+                            <div class="space-y-1 my-auto">
+                                <div class="flex justify-between text-[8px] font-bold text-slate-700">
+                                    <span>Engineering Dept</span>
+                                    <span class="text-emerald-600">Active</span>
+                                </div>
+                                <div class="h-2 bg-sky-100 rounded w-full"></div>
+                                <div class="h-1.5 bg-slate-200 rounded w-5/6"></div>
+                                <div class="h-1.5 bg-slate-200 rounded w-full"></div>
+                            </div>
+                            <div class="h-1 bg-blue-500/40 rounded"></div>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">Employee List</p>
+                    </div>
+
+                    <!-- Card 6: Annual Calendar -->
+                    <div onclick="createNewSpreadsheet('calendar')" class="template-card cursor-pointer group">
+                        <div class="template-card-preview p-2 bg-[#0b4f6c] text-white flex flex-col justify-between">
+                            <div class="text-[8px] font-bold tracking-wider text-sky-200">ANNUAL CALENDAR</div>
+                            <div class="grid grid-cols-4 gap-1 my-auto">
+                                <div class="h-4 bg-white/15 rounded-xs"></div>
+                                <div class="h-4 bg-white/25 rounded-xs"></div>
+                                <div class="h-4 bg-white/15 rounded-xs"></div>
+                                <div class="h-4 bg-amber-400/80 rounded-xs"></div>
+                                <div class="h-4 bg-white/15 rounded-xs"></div>
+                                <div class="h-4 bg-white/15 rounded-xs"></div>
+                                <div class="h-4 bg-emerald-400/70 rounded-xs"></div>
+                                <div class="h-4 bg-white/15 rounded-xs"></div>
+                            </div>
+                            <div class="h-1 bg-sky-300/40 rounded"></div>
+                        </div>
+                        <p class="mt-2 text-xs sm:text-[13px] font-medium text-[#202124] truncate">Annual Calendar</p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Spreadsheets Table Section (Matches Screenshot 3) -->
+        <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-6">
+            <!-- List Header Bar -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 text-xs sm:text-sm font-medium text-[#202124]">
+                <div class="w-1/2 sm:w-6/12">Today & Recent</div>
+                <div class="hidden sm:block sm:w-2/12 text-slate-600">Owned by anyone</div>
+                <div class="w-1/3 sm:w-3/12 text-slate-600">Last opened by me</div>
+                <div class="w-auto sm:w-1/12 flex items-center justify-end gap-2 text-slate-600">
+                    <button onclick="toggleSortRecent()" class="p-1.5 rounded-full hover:bg-slate-100" title="Sort A-Z">
+                        <i class="fa-solid fa-arrow-down-a-z"></i>
+                    </button>
+                    <button onclick="createNewSpreadsheet('blank')" class="p-1.5 rounded-full hover:bg-emerald-50 text-[#0f9d58]" title="➕ Create Blank Spreadsheet">
+                        ➕
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Spreadsheets Rows -->
+            <div id="recentSpreadsheetsContainer" class="divide-y divide-slate-100">
+                <!-- Populated via JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         VIEW 2: SPREADSHEET EDITOR VIEW (GOOGLE SHEETS + EXCEL RIBBON TOOLS)
+         ========================================================================= -->
+    <div id="editorView" class="hidden h-screen flex flex-col bg-[#f9fbfd] overflow-hidden">
+
+        <!-- 1. TOP CHROME HEADER & MENU BAR -->
+        <div class="px-3 pt-2 pb-1 flex flex-wrap items-center justify-between gap-2 bg-[#f9fbfd]">
+            <!-- Left: Sheets Icon + Title + Star + Menu Row -->
+            <div class="flex items-center gap-2.5">
+                <!-- Green Sheets Logo Button (Returns to Sheets Home Dashboard) -->
+                <button onclick="switchView('dashboard')" class="w-10 h-10 rounded-lg bg-[#0f9d58] hover:bg-[#0b8043] text-white flex items-center justify-center shadow-2xs transition shrink-0" title="All Spreadsheets Dashboard">
+                    <i class="fa-solid fa-table-cells text-lg"></i>
+                </button>
+
+                <div>
+                    <!-- Editable Title + Star + Local Save Status -->
+                    <div class="flex items-center gap-1.5">
+                        <input 
+                            type="text" 
+                            id="sheetTitleInput" 
+                            onchange="renameCurrentSpreadsheet(this.value)"
+                            value="Untitled spreadsheet" 
+                            class="px-2 py-0.5 text-base sm:text-[18px] font-medium text-[#1f1f1f] bg-transparent hover:border-slate-300 focus:bg-white border border-transparent focus:border-[#1a73e8] rounded focus:outline-none transition max-w-[220px] sm:max-w-xs"
+                        >
+                        <button onclick="toggleStarCurrentSheet()" id="starSheetBtn" class="p-1 rounded hover:bg-slate-200/60 text-slate-500 text-sm transition" title="Star / Favorite">
+                            <i class="fa-regular fa-star"></i>
+                        </button>
+                        <span id="editorSaveBadge" class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                            <i class="fa-solid fa-cloud-arrow-up text-[10px]"></i> Saved locally
+                        </span>
+                    </div>
+
+                    <!-- Interactive Menu Bar (File, Edit, View, Insert, Format, Data, Formulas) -->
+                    <nav class="flex items-center flex-wrap gap-0.5 text-[13px] text-[#1f1f1f] mt-0.5 select-none" id="topMenuBar">
+                        <!-- FILE MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">File</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="createNewSpreadsheet('blank'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>➕ New Blank Spreadsheet</span><span class="text-slate-400">Ctrl+N</span>
+                                </button>
+                                <button onclick="switchView('dashboard'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>📂 Open Sheets Dashboard</span>
+                                </button>
+                                <button onclick="duplicateCurrentSpreadsheet(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>➕ Make a Copy</span>
+                                </button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="exportCurrentSheetCSV(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>⬇️ Download as .CSV</span>
+                                </button>
+                                <button onclick="exportCurrentSheetJSON(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>📦 Download Workbook (.JSON)</span>
+                                </button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="window.print(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>🖨️ Print</span><span class="text-slate-400">Ctrl+P</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- EDIT MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">Edit</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="undoAction(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Undo</span><span class="text-slate-400">Ctrl+Z</span>
+                                </button>
+                                <button onclick="redoAction(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Redo</span><span class="text-slate-400">Ctrl+Y</span>
+                                </button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="copySelectedCells(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Copy</span><span class="text-slate-400">Ctrl+C</span>
+                                </button>
+                                <button onclick="pasteClipboardCells(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Paste</span><span class="text-slate-400">Ctrl+V</span>
+                                </button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="openFindReplaceModal(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>🔍 Find and replace</span><span class="text-slate-400">Ctrl+F</span>
+                                </button>
+                                <button onclick="clearSelectedRangeValues(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 text-rose-600">
+                                    <span>Clear selected cells (Delete)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- VIEW MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">View</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="toggleGridlines(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Show Gridlines</span><span id="gridlinesCheck">✓</span>
+                                </button>
+                                <button onclick="toggleFormulaBarVisibility(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex items-center justify-between">
+                                    <span>Show Formula Bar</span><span id="formulaBarCheck">✓</span>
+                                </button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="setGridZoom(100); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">Zoom 100%</button>
+                                <button onclick="setGridZoom(125); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">Zoom 125%</button>
+                            </div>
+                        </div>
+
+                        <!-- INSERT MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">Insert</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="insertRowAtActive(true); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">➕ Row above</button>
+                                <button onclick="insertRowAtActive(false); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">➕ Row below</button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="addMoreRows(20); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">➕ Add 20 rows at bottom</button>
+                                <button onclick="addNewSheetTab(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 font-semibold text-[#0f9d58]">➕ New sheet tab</button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="insertCurrentDate(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">📅 Insert today's date</button>
+                            </div>
+                        </div>
+
+                        <!-- FORMAT MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">Format</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="applyStyleToSelection('bold'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex justify-between"><span>Bold</span><span>Ctrl+B</span></button>
+                                <button onclick="applyStyleToSelection('italic'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex justify-between"><span>Italic</span><span>Ctrl+I</span></button>
+                                <button onclick="applyStyleToSelection('underline'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 flex justify-between"><span>Underline</span><span>Ctrl+U</span></button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="formatSelectionAsTable(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 font-medium text-emerald-700">🎨 Format as Alternating Table</button>
+                                <button onclick="clearSelectionFormatting(); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100 text-slate-600">Clear formatting</button>
+                            </div>
+                        </div>
+
+                        <!-- DATA MENU -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70">Data</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="sortSheetByActiveColumn('asc'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">Sort sheet by active column (A → Z)</button>
+                                <button onclick="sortSheetByActiveColumn('desc'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">Sort sheet by active column (Z → A)</button>
+                                <hr class="my-1 border-slate-200">
+                                <button onclick="transformSelectionCase('upper'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">UPPERCASE selected cells</button>
+                                <button onclick="transformSelectionCase('lower'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">lowercase selected cells</button>
+                            </div>
+                        </div>
+
+                        <!-- FORMULAS MENU (EXCEL POWER TAB) -->
+                        <div class="menu-item-wrapper relative">
+                            <button onclick="toggleMenuDropdown(event, this)" class="px-2 py-0.5 rounded hover:bg-slate-200/70 font-medium text-[#107c41]">Formulas</button>
+                            <div class="menu-dropdown text-xs">
+                                <button onclick="insertQuickFormula('SUM'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">∑ AutoSum — <code>=SUM(A1:A5)</code></button>
+                                <button onclick="insertQuickFormula('AVERAGE'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">x̄ Average — <code>=AVERAGE(A1:A5)</code></button>
+                                <button onclick="insertQuickFormula('COUNT'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100"># Count Numbers — <code>=COUNT(A1:A5)</code></button>
+                                <button onclick="insertQuickFormula('MAX'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">↑ Max Value — <code>=MAX(A1:A5)</code></button>
+                                <button onclick="insertQuickFormula('MIN'); closeAllMenus();" class="w-full px-4 py-2 text-left hover:bg-slate-100">↓ Min Value — <code>=MIN(A1:A5)</code></button>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Right: All Sheets Dashboard, Export CSV, and NTURN Projects Button (No Arrow) -->
+            <div class="flex items-center gap-2">
+                <button onclick="switchView('dashboard')" class="px-3 py-1.5 rounded-full bg-white hover:bg-slate-100 border border-slate-300 text-xs font-medium text-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-folder-open text-[#0f9d58]"></i>
+                    <span>All Sheets</span>
+                </button>
+
+                <button onclick="exportCurrentSheetCSV()" class="px-3.5 py-1.5 rounded-full bg-[#c2e7ff] hover:bg-[#a8d8f8] text-[#001d35] font-semibold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Export .CSV</span>
+                </button>
+
+                <!-- NTURN Projects Direct Link (NO Arrow, Plus Badge) -->
+                <a href="index.html" class="px-3.5 py-1.5 rounded-full bg-plum hover:bg-plum-hover text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-2xs">
+                    <span class="text-amber-300">➕</span>
+                    <span>NTURN Projects</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. GOOGLE SHEETS PILL FORMATTING TOOLBAR + EXCEL RIBBON SHORTCUTS (#edf2fa) -->
+        <div class="mx-3 my-1 px-3 py-1.5 rounded-full bg-[#edf2fa] flex items-center flex-wrap gap-1 text-slate-700 text-xs select-none overflow-x-auto">
+            <!-- Search Menus Pill -->
+            <button onclick="openFindReplaceModal()" class="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-600 flex items-center gap-1.5 mr-1 shadow-2xs" title="Find in sheet (Ctrl+F)">
+                <i class="fa-solid fa-magnifying-glass text-[11px]"></i>
+                <span class="text-[11px]">Find</span>
+            </button>
+
+            <!-- Undo / Redo / Print -->
+            <button onclick="undoAction()" class="p-1.5 rounded hover:bg-slate-200/80" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+            <button onclick="redoAction()" class="p-1.5 rounded hover:bg-slate-200/80" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+            <button onclick="window.print()" class="p-1.5 rounded hover:bg-slate-200/80" title="Print"><i class="fa-solid fa-print"></i></button>
+
+            <!-- Zoom Selector -->
+            <select id="zoomSelect" onchange="setGridZoom(this.value)" class="px-1.5 py-1 rounded hover:bg-slate-200/80 bg-transparent font-medium cursor-pointer focus:outline-none">
+                <option value="75">75%</option>
+                <option value="100" selected>100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+            </select>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Number Format Buttons (Currency, %, Decimals) -->
+            <button onclick="formatSelectionNumber('currency')" class="px-1.5 py-1 rounded hover:bg-slate-200/80 font-semibold" title="Format as Currency">$ / ₹</button>
+            <button onclick="formatSelectionNumber('percent')" class="px-1.5 py-1 rounded hover:bg-slate-200/80 font-semibold" title="Format as Percent">%</button>
+            <button onclick="formatSelectionNumber('comma')" class="px-1.5 py-1 rounded hover:bg-slate-200/80 font-mono text-[11px]" title="Number Format">123</button>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Font Family -->
+            <select id="fontFamilySelect" onchange="applyStyleToSelection('fontFamily', this.value)" class="px-2 py-1 rounded hover:bg-slate-200/80 bg-transparent font-medium cursor-pointer focus:outline-none max-w-[105px]">
+                <option value="Inter">Inter</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
+            </select>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Font Size (- [11] +) -->
+            <button onclick="changeFontSize(-1)" class="w-6 h-6 rounded hover:bg-slate-200/80 font-bold" title="Decrease font size">−</button>
+            <input type="text" id="fontSizeInput" value="13" onchange="applyStyleToSelection('fontSize', parseInt(this.value)||13)" class="w-8 h-6 text-center bg-white border border-slate-300 rounded text-xs font-medium">
+            <button onclick="changeFontSize(1)" class="w-6 h-6 rounded hover:bg-slate-200/80 font-bold" title="Increase font size">➕</button>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Bold, Italic, Underline, Strikethrough -->
+            <button onclick="applyStyleToSelection('bold')" id="btnBold" class="w-7 h-7 rounded hover:bg-slate-200/80 font-bold" title="Bold (Ctrl+B)">B</button>
+            <button onclick="applyStyleToSelection('italic')" id="btnItalic" class="w-7 h-7 rounded hover:bg-slate-200/80 italic font-serif" title="Italic (Ctrl+I)">I</button>
+            <button onclick="applyStyleToSelection('underline')" id="btnUnderline" class="w-7 h-7 rounded hover:bg-slate-200/80 underline" title="Underline (Ctrl+U)">U</button>
+            <button onclick="applyStyleToSelection('strike')" id="btnStrike" class="w-7 h-7 rounded hover:bg-slate-200/80 line-through" title="Strikethrough">S</button>
+
+            <!-- Text Color Picker -->
+            <label class="w-7 h-7 rounded hover:bg-slate-200/80 flex flex-col items-center justify-center cursor-pointer relative" title="Text color">
+                <span class="font-bold text-xs leading-none">A</span>
+                <span id="textColorBar" class="w-4 h-1 bg-slate-900 mt-0.5"></span>
+                <input type="color" value="#1f1f1f" onchange="applyStyleToSelection('color', this.value); document.getElementById('textColorBar').style.backgroundColor=this.value;" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+            </label>
+
+            <!-- Fill Background Color Picker -->
+            <label class="w-7 h-7 rounded hover:bg-slate-200/80 flex flex-col items-center justify-center cursor-pointer relative" title="Fill color">
+                <i class="fa-solid fa-fill-drip text-[11px]"></i>
+                <span id="fillColorBar" class="w-4 h-1 bg-amber-300 mt-0.5"></span>
+                <input type="color" value="#fef08a" onchange="applyStyleToSelection('bg', this.value); document.getElementById('fillColorBar').style.backgroundColor=this.value;" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+            </label>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Alignment (Left, Center, Right) & Wrap -->
+            <button onclick="applyStyleToSelection('align', 'left')" class="p-1.5 rounded hover:bg-slate-200/80" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+            <button onclick="applyStyleToSelection('align', 'center')" class="p-1.5 rounded hover:bg-slate-200/80" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+            <button onclick="applyStyleToSelection('align', 'right')" class="p-1.5 rounded hover:bg-slate-200/80" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+            <button onclick="applyStyleToSelection('wrap')" class="p-1.5 rounded hover:bg-slate-200/80" title="Wrap Text"><i class="fa-solid fa-text-width"></i></button>
+
+            <span class="h-4 w-[1px] bg-slate-300 mx-1"></span>
+
+            <!-- Excel-Style Power Buttons: Format as Table, AutoSum (∑), Sort A-Z -->
+            <button onclick="formatSelectionAsTable()" class="px-2 py-1 rounded hover:bg-emerald-100 text-[#107c41] font-semibold flex items-center gap-1" title="Format selected cells as an alternating table">
+                <i class="fa-solid fa-table"></i>
+                <span class="hidden lg:inline">Format Table</span>
+            </button>
+
+            <button onclick="insertQuickFormula('SUM')" class="px-2 py-1 rounded hover:bg-emerald-100 text-[#107c41] font-bold flex items-center gap-1" title="Insert =SUM() Formula">
+                <span class="text-sm font-serif">∑</span>
+                <span class="hidden lg:inline">AutoSum</span>
+            </button>
+
+            <button onclick="sortSheetByActiveColumn('asc')" class="px-2 py-1 rounded hover:bg-slate-200/80 flex items-center gap-1" title="Sort active column A to Z">
+                <i class="fa-solid fa-arrow-down-a-z text-sky-700"></i>
+                <span class="hidden xl:inline">Sort A-Z</span>
+            </button>
+        </div>
+
+        <!-- 3. FORMULA BAR (CELL REFERENCE BOX + FX INPUT — MATCHES SCREENSHOTS 1 & 2) -->
+        <div id="formulaBarContainer" class="px-3 py-1 bg-white border-y border-slate-200 flex items-center gap-2 text-xs">
+            <!-- Active Cell Address Box (e.g. A1) -->
+            <div id="cellAddressBox" class="w-20 px-2.5 py-1 rounded bg-slate-50 border border-slate-200 font-semibold text-slate-700 text-center select-all">
+                A1
+            </div>
+
+            <span class="h-4 w-[1px] bg-slate-200"></span>
+
+            <!-- fx Symbol -->
+            <div class="px-1.5 font-serif italic font-bold text-slate-500 text-sm select-none" title="Insert Formula (=SUM, =AVERAGE, =IF)">
+                fx
+            </div>
+
+            <!-- Formula / Cell Value Input -->
+            <input 
+                type="text" 
+                id="formulaBarInput" 
+                placeholder="Enter value or formula (e.g. =SUM(A1:A10) or =A1+B1)" 
+                class="flex-1 px-2 py-1 text-[13px] text-slate-900 bg-white focus:outline-none font-sans"
+            >
+        </div>
+
+        <!-- 4. MAIN SPREADSHEET SCROLLABLE GRID (COLUMNS A-Z, ROWS 1-50+) -->
+        <div id="sheetGridWrapper" class="sheet-grid-container flex-1">
+            <table id="spreadsheetTable" class="spreadsheet-table">
+                <thead id="spreadsheetThead"></thead>
+                <tbody id="spreadsheetTbody"></tbody>
+            </table>
+
+            <!-- Bottom Add More Rows Bar inside Grid -->
+            <div class="p-3 bg-[#f8f9fa] border-t border-slate-200 flex items-center gap-3 text-xs">
+                <button onclick="addMoreRows(20)" class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-slate-300 text-slate-700 font-semibold shadow-2xs transition flex items-center gap-1.5">
+                    <span>➕</span>
+                    <span>Add 20 More Rows</span>
+                </button>
+                <span class="text-slate-400">Tip: Use formulas like <code>=SUM(B2:B10)</code>, <code>=AVERAGE(C2:C10)</code>, or <code>=B2*C2</code></span>
+            </div>
+        </div>
+
+        <!-- 5. BOTTOM SHEET TABS & LIVE STATS STATUS BAR (MATCHES EXCEL & GOOGLE SHEETS) -->
+        <footer class="px-3 py-1 bg-[#f9fbfd] border-t border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs select-none">
+            <!-- Left: Plus (➕) Button + Sheet Tabs (Sheet1, Sheet2...) -->
+            <div class="flex items-center gap-1 overflow-x-auto py-0.5">
+                <button onclick="addNewSheetTab()" class="w-7 h-7 rounded-full hover:bg-slate-200/80 flex items-center justify-center text-slate-700 font-bold transition" title="➕ Add Sheet">
+                    ➕
+                </button>
+                <button onclick="switchView('dashboard')" class="w-7 h-7 rounded-full hover:bg-slate-200/80 flex items-center justify-center text-slate-600 transition mr-1" title="All Spreadsheets">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <!-- Dynamic Sheet Tabs List -->
+                <div id="sheetTabsBar" class="flex items-center gap-1">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Right: Live Selection Metrics (SUM, AVERAGE, COUNT) + Ready Status -->
+            <div class="flex items-center gap-3 text-slate-600">
+                <div id="liveSelectionStats" class="flex items-center gap-2 bg-[#edf2fa] px-3 py-1 rounded-full text-[11px] font-medium text-slate-700">
+                    <span>Ready</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- =========================================================================
+         FIND & REPLACE MODAL
+         ========================================================================= -->
+    <div id="findReplaceModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+            <div class="px-5 py-3.5 bg-[#edf2fa] flex items-center justify-between">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-[#0f9d58]"></i>
+                    <span>Find and Replace</span>
+                </h3>
+                <button onclick="closeFindReplaceModal()" class="text-slate-500 hover:text-slate-800">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Find text or number</label>
+                    <input type="text" id="findTextInput" placeholder="Search cell contents..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-[#1a73e8]">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Replace with</label>
+                    <input type="text" id="replaceTextInput" placeholder="Replacement value..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-[#1a73e8]">
+                </div>
+                <p id="findStatusMessage" class="text-[11px] text-emerald-700 font-medium"></p>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button onclick="findNextCellMatch()" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold">Find Next</button>
+                    <button onclick="replaceAllCellMatches()" class="px-4 py-2 rounded-lg bg-[#0f9d58] hover:bg-[#0b8043] text-white font-semibold">Replace All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-12 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =========================================================================
+         NTURN SHEETS ENGINE (FORMULA PARSER, TEMPLATES, STORAGE SYNC)
+         ========================================================================= -->
+    <script>
+        /* =========================================================================
+           1. STORAGE KEYS & PRE-POPULATED TEMPLATES / SAMPLE FILES
+           ========================================================================= */
+        const SHEETS_STORAGE_KEY = 'nturn_sheets_files_v1';
+        const MASTER_HUB_KEY = 'nturn_projects_master_v1';
+        const NUM_COLS = 26; // A to Z
+        let defaultRowsCount = 45;
+
+        // Helper to convert column index (0 -> A, 25 -> Z)
+        function colToLetter(colIdx) {
+            return String.fromCharCode(65 + colIdx);
+        }
+
+        function letterToCol(letter) {
+            return letter.toUpperCase().charCodeAt(0) - 65;
+        }
+
+        function buildTemplateCells(type) {
+            const cells = {};
+            const set = (coord, raw, style = {}) => {
+                cells[coord] = { raw: String(raw), style };
+            };
+
+            if (type === 'todo') {
+                set('A1', 'NTURN To-Do & Action List', { bold: true, fontSize: 16, color: '#0f9d58' });
+                set('A3', 'Status', { bold: true, bg: '#e6f4ea', color: '#137333' });
+                set('B3', 'Task / Deliverable', { bold: true, bg: '#e6f4ea', color: '#137333' });
+                set('C3', 'Priority', { bold: true, bg: '#e6f4ea', color: '#137333' });
+                set('D3', 'Due Date', { bold: true, bg: '#e6f4ea', color: '#137333' });
+                set('E3', 'Owner', { bold: true, bg: '#e6f4ea', color: '#137333' });
+
+                set('A4', '✓ Done', { color: '#0f9d58', bold: true });
+                set('B4', 'Finalize NTURN Projects Home Launcher');
+                set('C4', 'High');
+                set('D4', '2026-10-30');
+                set('E4', 'Me');
+
+                set('A5', '✓ Done', { color: '#0f9d58', bold: true });
+                set('B5', 'Build NTURN Sheets with Formula Engine');
+                set('C5', 'High');
+                set('D5', '2026-10-30');
+                set('E5', 'Me');
+
+                set('A6', 'Pending', { color: '#d97706', bold: true });
+                set('B6', 'Connect Docs and CRM modules');
+                set('C6', 'Medium');
+                set('D6', '2026-11-02');
+                set('E6', 'Team');
+            } else if (type === 'annual_budget') {
+                set('A1', 'Annual Business Budget Tracker', { bold: true, fontSize: 16, color: '#c2410c' });
+                set('A3', 'Category', { bold: true, bg: '#ffedd5' });
+                set('B3', 'Q1 ($)', { bold: true, bg: '#ffedd5', align: 'right' });
+                set('C3', 'Q2 ($)', { bold: true, bg: '#ffedd5', align: 'right' });
+                set('D3', 'Q3 ($)', { bold: true, bg: '#ffedd5', align: 'right' });
+                set('E3', 'Q4 ($)', { bold: true, bg: '#ffedd5', align: 'right' });
+                set('F3', 'Annual Total', { bold: true, bg: '#fed7aa', align: 'right' });
+
+                set('A4', 'SaaS Subscriptions'); set('B4', '4200'); set('C4', '4800'); set('D4', '5100'); set('E4', '5900'); set('F4', '=SUM(B4:E4)', { bold: true });
+                set('A5', 'Client Services'); set('B5', '6500'); set('C5', '7200'); set('D5', '8000'); set('E5', '9400'); set('F5', '=SUM(B5:E5)', { bold: true });
+                set('A6', 'Marketing & Ads'); set('B6', '1200'); set('C6', '1450'); set('D6', '1600'); set('E6', '1900'); set('F6', '=SUM(B6:E6)', { bold: true });
+                set('A7', 'Total Combined', { bold: true, bg: '#f1f5f9' });
+                set('B7', '=SUM(B4:B6)', { bold: true, bg: '#f1f5f9' });
+                set('C7', '=SUM(C4:C6)', { bold: true, bg: '#f1f5f9' });
+                set('D7', '=SUM(D4:D6)', { bold: true, bg: '#f1f5f9' });
+                set('E7', '=SUM(E4:E6)', { bold: true, bg: '#f1f5f9' });
+                set('F7', '=SUM(F4:F6)', { bold: true, bg: '#dcfce7', color: '#15803d' });
+            } else if (type === 'monthly_budget') {
+                set('A1', 'Monthly Budget vs Actuals', { bold: true, fontSize: 16, color: '#1e293b' });
+                set('A3', 'Expense Item', { bold: true, bg: '#e2e8f0' });
+                set('B3', 'Planned Budget', { bold: true, bg: '#e2e8f0', align: 'right' });
+                set('C3', 'Actual Spent', { bold: true, bg: '#e2e8f0', align: 'right' });
+                set('D3', 'Remaining', { bold: true, bg: '#e2e8f0', align: 'right' });
+
+                set('A4', 'Cloud Hosting & Domains'); set('B4', '500'); set('C4', '420'); set('D4', '=B4-C4');
+                set('A5', 'Video & Design Tools'); set('B5', '350'); set('C5', '310'); set('D5', '=B5-C5');
+                set('A6', 'Creator Sponsorships'); set('B6', '2000'); set('C6', '1750'); set('D6', '=B6-C6');
+                set('A7', 'Total Monthly', { bold: true, bg: '#f8fafc' });
+                set('B7', '=SUM(B4:B6)', { bold: true, bg: '#f8fafc' });
+                set('C7', '=SUM(C4:C6)', { bold: true, bg: '#f8fafc' });
+                set('D7', '=SUM(D4:D6)', { bold: true, bg: '#dcfce7', color: '#15803d' });
+            } else if (type === 'employee_list') {
+                set('A1', 'Employee Directory & Status', { bold: true, fontSize: 15, color: '#1a73e8' });
+                set('A3', 'Employee Name', { bold: true, bg: '#d3e3fd', color: '#0b57d0' });
+                set('B3', 'Department', { bold: true, bg: '#d3e3fd', color: '#0b57d0' });
+                set('C3', 'Role', { bold: true, bg: '#d3e3fd', color: '#0b57d0' });
+                set('D3', 'Start Date', { bold: true, bg: '#d3e3fd', color: '#0b57d0', align: 'right' });
+                set('E3', 'Status', { bold: true, bg: '#d3e3fd', color: '#0b57d0' });
+                set('F3', 'Salary ($)', { bold: true, bg: '#d3e3fd', color: '#0b57d0', align: 'right' });
+
+                set('A4', 'Alice Johnson'); set('B4', 'Engineering'); set('C4', 'Frontend Dev'); set('D4', '2024-03-15'); set('E4', 'Active'); set('F4', '95000');
+                set('A5', 'Bob Smith'); set('B5', 'Sales'); set('C5', 'Account Exec'); set('D5', '2023-11-01'); set('E5', 'Active'); set('F5', '82000');
+                set('A6', 'Carol Davis'); set('B6', 'Marketing'); set('C6', 'Content Lead'); set('D6', '2025-01-20'); set('E6', 'On Leave'); set('F6', '88000');
+                set('A7', 'Total Payroll Summary', { bold: true, bg: '#f1f5f9' });
+                set('F7', '=SUM(F4:F6)', { bold: true, bg: '#dcfce7', color: '#137333' });
+            } else if (type === 'calendar') {
+                set('A1', '2026 — 2027 Release & Milestone Calendar', { bold: true, fontSize: 15, color: '#0b4f6c' });
+                set('A3', 'Month', { bold: true, bg: '#e0f2fe' });
+                set('B3', 'Primary Milestone', { bold: true, bg: '#e0f2fe' });
+                set('C3', 'App Module', { bold: true, bg: '#e0f2fe' });
+                set('D3', 'Status', { bold: true, bg: '#e0f2fe' });
+
+                set('A4', 'October 2026'); set('B4', 'Launch NTURN Projects & NTURN Sheets'); set('C4', 'Sheets'); set('D4', 'Completed');
+                set('A5', 'November 2026'); set('B5', 'Release Docs, Slides & Code Templates'); set('C5', 'Docs / Code'); set('D5', 'In Progress');
+                set('A6', 'December 2026'); set('B6', 'Launch CRM, Invoicing & Accounting'); set('C6', 'ERP Suite'); set('D6', 'Planned');
+            }
+            return cells;
+        }
+
+        const INITIAL_SPREADSHEETS = [
+            {
+                id: 'sheet-sample-1',
+                title: 'Q4_Sales_Projections_2026',
+                owner: 'me',
+                starred: true,
+                updatedAt: '10:59',
+                activeSheetIndex: 0,
+                sheets: [
+                    { name: 'Sheet1', rows: 45, cells: buildTemplateCells('employee_list') }
+                ]
+            },
+            {
+                id: 'sheet-sample-2',
+                title: 'Employee_Directory_Active',
+                owner: 'me',
+                starred: false,
+                updatedAt: '10:55',
+                activeSheetIndex: 0,
+                sheets: [
+                    { name: 'Sheet1', rows: 45, cells: buildTemplateCells('employee_list') }
+                ]
+            },
+            {
+                id: 'sheet-sample-3',
+                title: 'NTURN_Annual_Business_Budget_2026',
+                owner: 'me',
+                starred: true,
+                updatedAt: 'Yesterday',
+                activeSheetIndex: 0,
+                sheets: [
+                    { name: 'Sheet1', rows: 45, cells: buildTemplateCells('annual_budget') }
+                ]
+            },
+            {
+                id: 'sheet-sample-4',
+                title: 'Project_Launch_To_Do_Checklist',
+                owner: 'me',
+                starred: false,
+                updatedAt: 'Yesterday',
+                activeSheetIndex: 0,
+                sheets: [
+                    { name: 'Sheet1', rows: 45, cells: buildTemplateCells('todo') }
+                ]
+            }
+        ];
+
+        /* =========================================================================
+           2. APPLICATION STATE & STORAGE SYNC
+           ========================================================================= */
+        let allSpreadsheets = [];
+        let currentDocId = null;
+        let activeCellCoord = 'A1';
+        let selectionStartCoord = 'A1';
+        let selectionEndCoord = 'A1';
+        let isMouseSelecting = false;
+        let showGridlinesState = true;
+        let sortRecentAsc = false;
+
+        // Undo / Redo Stacks per session
+        let undoStack = [];
+        let redoStack = [];
+        let internalClipboard = null;
+
+        function loadSpreadsheetsFromStorage() {
+            try {
+                const raw = localStorage.getItem(SHEETS_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allSpreadsheets = parsed;
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to read sheets storage:', e);
+            }
+            allSpreadsheets = JSON.parse(JSON.stringify(INITIAL_SPREADSHEETS));
+            saveSpreadsheetsToStorage(false);
+        }
+
+        function saveSpreadsheetsToStorage(showBadge = true) {
+            try {
+                localStorage.setItem(SHEETS_STORAGE_KEY, JSON.stringify(allSpreadsheets));
+
+                // Also sync summary into NTURN Projects Master Hub key so Export Backup on index.html includes all sheets
+                const masterRaw = localStorage.getItem(MASTER_HUB_KEY);
+                if (masterRaw) {
+                    const master = JSON.parse(masterRaw);
+                    if (!master.appRecords) master.appRecords = {};
+                    master.appRecords['sheets'] = allSpreadsheets.map(doc => ({
+                        title: doc.title,
+                        value: `${doc.sheets.length} Sheet(s) • ${Object.keys(doc.sheets[0]?.cells || {}).length} cells`,
+                        date: doc.updatedAt || new Date().toLocaleDateString()
+                    }));
+                    master.nturnSheetsFullWorkbooks = allSpreadsheets;
+                    localStorage.setItem(MASTER_HUB_KEY, JSON.stringify(master));
+                }
+
+                if (showBadge) {
+                    const badge = document.getElementById('editorSaveBadge');
+                    if (badge) {
+                        badge.innerHTML = `<i class="fa-solid fa-check text-[10px]"></i> Saved locally`;
+                    }
+                }
+            } catch (err) {
+                showToast('Browser storage full — please export backup', 'error');
+            }
+        }
+
+        function getCurrentDoc() {
+            return allSpreadsheets.find(d => d.id === currentDocId) || allSpreadsheets[0];
+        }
+
+        function getCurrentSheet() {
+            const doc = getCurrentDoc();
+            if (!doc) return null;
+            return doc.sheets[doc.activeSheetIndex || 0] || doc.sheets[0];
+        }
+
+        /* =========================================================================
+           3. VIEW SWITCHING (DASHBOARD VS. EDITOR)
+           ========================================================================= */
+        function switchView(viewName) {
+            const dash = document.getElementById('dashboardView');
+            const editor = document.getElementById('editorView');
+
+            if (viewName === 'dashboard') {
+                editor.classList.add('hidden');
+                dash.classList.remove('hidden');
+                renderRecentSpreadsheets();
+            } else {
+                dash.classList.add('hidden');
+                editor.classList.remove('hidden');
+                renderFullSpreadsheetEditor();
+            }
+        }
+
+        /* =========================================================================
+           4. VIEW 1: RENDER RECENT SPREADSHEETS DASHBOARD
+           ========================================================================= */
+        function renderRecentSpreadsheets() {
+            const container = document.getElementById('recentSpreadsheetsContainer');
+            const query = (document.getElementById('dashboardSearchInput')?.value || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !query);
+
+            let list = allSpreadsheets.filter(doc => doc.title.toLowerCase().includes(query));
+            if (sortRecentAsc) {
+                list = [...list].sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="py-14 text-center">
+                        <p class="text-sm font-medium text-slate-600">No spreadsheets match your search</p>
+                        <button onclick="createNewSpreadsheet('blank')" class="mt-3 px-4 py-2 rounded-full bg-[#0f9d58] text-white text-xs font-semibold">
+                            ➕ Create Blank Spreadsheet
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.map(doc => `
+                <div onclick="openSpreadsheetById('${doc.id}')" class="group px-3 py-3 hover:bg-[#e8f0fe]/60 rounded-lg flex items-center justify-between gap-3 cursor-pointer transition">
+                    <!-- Title + Green Icon -->
+                    <div class="w-1/2 sm:w-6/12 flex items-center gap-3.5 min-w-0">
+                        <div class="w-6 h-6 rounded bg-[#0f9d58] text-white flex items-center justify-center text-xs shrink-0">
+                            <i class="fa-solid fa-table-cells"></i>
+                        </div>
+                        <span class="text-xs sm:text-[14px] font-medium text-[#202124] truncate">${escapeHtml(doc.title)}</span>
+                        ${doc.starred ? '<i class="fa-solid fa-star text-amber-400 text-xs shrink-0"></i>' : ''}
+                    </div>
+
+                    <!-- Owner -->
+                    <div class="hidden sm:block sm:w-2/12 text-xs text-slate-500">
+                        ${escapeHtml(doc.owner || 'me')}
+                    </div>
+
+                    <!-- Last Opened -->
+                    <div class="w-1/3 sm:w-3/12 text-xs text-slate-500">
+                        ${escapeHtml(doc.updatedAt || 'Just now')}
+                    </div>
+
+                    <!-- Right Actions (Duplicate ➕, CSV, Delete) -->
+                    <div class="w-auto sm:w-1/12 flex items-center justify-end gap-1" onclick="event.stopPropagation()">
+                        <button onclick="quickRenameFromDashboard('${doc.id}')" class="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-white" title="Rename">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="deleteSpreadsheetFromDashboard('${doc.id}')" class="p-1.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-white" title="Delete">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearDashboardSearch() {
+            const input = document.getElementById('dashboardSearchInput');
+            if (input) input.value = '';
+            renderRecentSpreadsheets();
+        }
+
+        function toggleSortRecent() {
+            sortRecentAsc = !sortRecentAsc;
+            renderRecentSpreadsheets();
+            showToast(sortRecentAsc ? 'Sorted spreadsheets A → Z' : 'Sorted by recent activity');
+        }
+
+        function createNewSpreadsheet(templateType = 'blank') {
+            const titles = {
+                blank: 'Untitled spreadsheet',
+                todo: 'To-Do Action List',
+                annual_budget: 'Annual Business Budget',
+                monthly_budget: 'Monthly Budget Tracker',
+                employee_list: 'Employee Directory',
+                calendar: 'Annual Release Calendar'
+            };
+
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const newDoc = {
+                id: 'sheet-' + Date.now(),
+                title: titles[templateType] || 'Untitled spreadsheet',
+                owner: 'me',
+                starred: false,
+                updatedAt: nowTime,
+                activeSheetIndex: 0,
+                sheets: [
+                    {
+                        name: 'Sheet1',
+                        rows: 45,
+                        cells: templateType === 'blank' ? {} : buildTemplateCells(templateType)
+                    }
+                ]
+            };
+
+            allSpreadsheets.unshift(newDoc);
+            currentDocId = newDoc.id;
+            activeCellCoord = 'A1';
+            selectionStartCoord = 'A1';
+            selectionEndCoord = 'A1';
+            saveSpreadsheetsToStorage(true);
+            switchView('editor');
+        }
+
+        function openSpreadsheetById(docId) {
+            currentDocId = docId;
+            const doc = getCurrentDoc();
+            if (doc) {
+                doc.updatedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            activeCellCoord = 'A1';
+            selectionStartCoord = 'A1';
+            selectionEndCoord = 'A1';
+            saveSpreadsheetsToStorage(false);
+            switchView('editor');
+        }
+
+        function quickRenameFromDashboard(docId) {
+            const doc = allSpreadsheets.find(d => d.id === docId);
+            if (!doc) return;
+            openSpreadsheetById(docId);
+            setTimeout(() => {
+                const input = document.getElementById('sheetTitleInput');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 80);
+        }
+
+        function deleteSpreadsheetFromDashboard(docId) {
+            if (allSpreadsheets.length <= 1) {
+                showToast('At least one spreadsheet must remain in the workspace', 'error');
+                return;
+            }
+            allSpreadsheets = allSpreadsheets.filter(d => d.id !== docId);
+            saveSpreadsheetsToStorage(true);
+            renderRecentSpreadsheets();
+            showToast('Spreadsheet removed');
+        }
+
+        /* =========================================================================
+           5. VIEW 2: RENDER SPREADSHEET EDITOR & FORMULA EVALUATION ENGINE
+           ========================================================================= */
+        function renderFullSpreadsheetEditor() {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+
+            document.getElementById('sheetTitleInput').value = doc.title;
+            const starBtn = document.getElementById('starSheetBtn');
+            starBtn.innerHTML = doc.starred
+                ? '<i class="fa-solid fa-star text-amber-400"></i>'
+                : '<i class="fa-regular fa-star"></i>';
+
+            buildGridDOM();
+            renderSheetTabsBar();
+            selectCell(activeCellCoord, false);
+        }
+
+        function buildGridDOM() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            const rowsCount = sheet.rows || defaultRowsCount;
+
+            // Build THEAD (Corner + A..Z)
+            const thead = document.getElementById('spreadsheetThead');
+            let headHtml = '<tr><th class="corner-header" onclick="selectAllCellsInSheet()" title="Select All"></th>';
+            for (let c = 0; c < NUM_COLS; c++) {
+                const colLetter = colToLetter(c);
+                headHtml += `<th class="col-header relative" id="col-hdr-${colLetter}" onclick="selectEntireColumn('${colLetter}')">
+                                ${colLetter}
+                                <div class="col-resizer" onmousedown="initColResize(event, ${c})"></div>
+                             </th>`;
+            }
+            headHtml += '</tr>';
+            thead.innerHTML = headHtml;
+
+            // Build TBODY (Rows 1..rowsCount)
+            const tbody = document.getElementById('spreadsheetTbody');
+            const rowsHtml = [];
+            for (let r = 1; r <= rowsCount; r++) {
+                let rowStr = `<tr><th class="row-header" id="row-hdr-${r}" onclick="selectEntireRow(${r})">${r}</th>`;
+                for (let c = 0; c < NUM_COLS; c++) {
+                    const coord = `${colToLetter(c)}${r}`;
+                    rowStr += `<td class="sheet-cell" id="cell-${coord}" data-coord="${coord}" onmousedown="handleCellMouseDown(event, '${coord}')" onmouseenter="handleCellMouseEnter(event, '${coord}')" ondblclick="startInlineEdit('${coord}')"></td>`;
+                }
+                rowStr += '</tr>';
+                rowsHtml.push(rowStr);
+            }
+            tbody.innerHTML = rowsHtml.join('');
+
+            renderDynamicColStyles();
+            refreshAllRenderedCells();
+        }
+
+        // ======================= Column Resizer Logic =======================
+        let isResizing = false;
+        let resizeColIdx = -1;
+        let startX = 0;
+        let startWidth = 0;
+
+        function initColResize(e, colIdx) {
+            e.stopPropagation(); // prevent selection when dragging
+            isResizing = true;
+            resizeColIdx = colIdx;
+            startX = e.clientX;
+            
+            const sheet = getCurrentSheet();
+            if (!sheet.colWidths) sheet.colWidths = {};
+            startWidth = sheet.colWidths[colIdx] || 110;
+            
+            document.body.style.cursor = 'col-resize';
+            e.target.classList.add('resizing');
+            
+            document.addEventListener('mousemove', onColResizeMove);
+            document.addEventListener('mouseup', onColResizeUp);
+        }
+
+        function onColResizeMove(e) {
+            if (!isResizing) return;
+            const diff = e.clientX - startX;
+            const newWidth = Math.max(40, startWidth + diff); // Minimum width 40px
+            
+            const sheet = getCurrentSheet();
+            sheet.colWidths[resizeColIdx] = newWidth;
+            renderDynamicColStyles();
+        }
+
+        function onColResizeUp(e) {
+            if (!isResizing) return;
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.querySelectorAll('.col-resizer').forEach(el => el.classList.remove('resizing'));
+            document.removeEventListener('mousemove', onColResizeMove);
+            document.removeEventListener('mouseup', onColResizeUp);
+            
+            saveSpreadsheetsToStorage(true);
+        }
+
+        function renderDynamicColStyles() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            let styleTag = document.getElementById('dynamicColStyles');
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'dynamicColStyles';
+                document.head.appendChild(styleTag);
+            }
+            
+            let css = '';
+            if (sheet.colWidths) {
+                for (let c in sheet.colWidths) {
+                    const w = sheet.colWidths[c];
+                    const letter = colToLetter(parseInt(c));
+                    css += `th#col-hdr-${letter}, td[data-coord^="${letter}"] { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; }\n`;
+                }
+            }
+            styleTag.innerHTML = css;
+        }
+        // ====================================================================
+
+        // Evaluate formulas (=SUM, =AVERAGE, =COUNT, =MAX, =MIN, =IF, =CONCAT, and math expressions)
+        function evaluateCellFormula(rawVal, cellsMap, visited = new Set()) {
+            if (rawVal === undefined || rawVal === null) return '';
+            const str = String(rawVal).trim();
+            if (!str.startsWith('=')) return str;
+
+            const expr = str.slice(1).trim();
+            if (!expr) return '';
+
+            try {
+                // Helper to expand range like A1:B4 into array of evaluated numbers or values
+                const expandRangeValues = (rangeStr) => {
+                    const parts = rangeStr.split(':');
+                    if (parts.length !== 2) return [];
+                    const startMatch = parts[0].trim().match(/^([A-Z]+)(\d+)$/i);
+                    const endMatch = parts[1].trim().match(/^([A-Z]+)(\d+)$/i);
+                    if (!startMatch || !endMatch) return [];
+
+                    const c1 = Math.min(letterToCol(startMatch[1]), letterToCol(endMatch[1]));
+                    const c2 = Math.max(letterToCol(startMatch[1]), letterToCol(endMatch[1]));
+                    const r1 = Math.min(parseInt(startMatch[2]), parseInt(endMatch[2]));
+                    const r2 = Math.max(parseInt(startMatch[2]), parseInt(endMatch[2]));
+
+                    const vals = [];
+                    for (let r = r1; r <= r2; r++) {
+                        for (let c = c1; c <= c2; c++) {
+                            const ref = `${colToLetter(c)}${r}`;
+                            if (visited.has(ref)) continue;
+                            const nextVisited = new Set(visited);
+                            nextVisited.add(ref);
+                            const cellObj = cellsMap[ref];
+                            const evaluated = cellObj ? evaluateCellFormula(cellObj.raw, cellsMap, nextVisited) : '';
+                            const num = parseFloat(String(evaluated).replace(/[$,₹%\s]/g, ''));
+                            if (!isNaN(num)) vals.push(num);
+                        }
+                    }
+                    return vals;
+                };
+
+                // 1. Handle Functions: SUM, AVERAGE, COUNT, MAX, MIN
+                const fnMatch = expr.match(/^(SUM|AVERAGE|AVG|COUNT|MAX|MIN)\(([^)]+)\)$/i);
+                if (fnMatch) {
+                    const fnName = fnMatch[1].toUpperCase();
+                    const argStr = fnMatch[2].trim();
+                    let numbers = [];
+                    argStr.split(',').forEach(token => {
+                        const t = token.trim();
+                        if (t.includes(':')) {
+                            numbers = numbers.concat(expandRangeValues(t));
+                        } else if (/^[A-Z]\d+$/i.test(t)) {
+                            const ref = t.toUpperCase();
+                            if (!visited.has(ref)) {
+                                const nextVisited = new Set(visited);
+                                nextVisited.add(ref);
+                                const v = evaluateCellFormula(cellsMap[ref]?.raw || '', cellsMap, nextVisited);
+                                const n = parseFloat(String(v).replace(/[$,₹%\s]/g, ''));
+                                if (!isNaN(n)) numbers.push(n);
+                            }
+                        } else {
+                            const n = parseFloat(t);
+                            if (!isNaN(n)) numbers.push(n);
+                        }
+                    });
+
+                    if (fnName === 'SUM') return numbers.reduce((a, b) => a + b, 0);
+                    if (fnName === 'AVERAGE' || fnName === 'AVG') return numbers.length ? +(numbers.reduce((a, b) => a + b, 0) / numbers.length).toFixed(2) : 0;
+                    if (fnName === 'COUNT') return numbers.length;
+                    if (fnName === 'MAX') return numbers.length ? Math.max(...numbers) : 0;
+                    if (fnName === 'MIN') return numbers.length ? Math.min(...numbers) : 0;
+                }
+
+                // 2. Replace single cell references (e.g. A1, B4) in arithmetic expressions
+                const parsedArithmetic = expr.replace(/\b([A-Z])(\d{1,3})\b/gi, (match, colL, rowN) => {
+                    const ref = `${colL.toUpperCase()}${rowN}`;
+                    if (visited.has(ref)) return '0';
+                    const nextVisited = new Set(visited);
+                    nextVisited.add(ref);
+                    const val = evaluateCellFormula(cellsMap[ref]?.raw || '0', cellsMap, nextVisited);
+                    const num = parseFloat(String(val).replace(/[$,₹%\s]/g, ''));
+                    return isNaN(num) ? '0' : String(num);
+                });
+
+                // Safely evaluate basic arithmetic
+                if (/^[0-9+\-*/().\s]+$/.test(parsedArithmetic)) {
+                    const result = Function(`"use strict"; return (${parsedArithmetic})`)();
+                    return typeof result === 'number' && !isNaN(result) ? +result.toFixed(4) : '#VALUE!';
+                }
+
+                return '#FORMULA!';
+            } catch (e) {
+                return '#ERROR!';
+            }
+        }
+
+        function refreshAllRenderedCells() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            const cellsMap = sheet.cells || {};
+
+            document.querySelectorAll('td.sheet-cell').forEach(td => {
+                const coord = td.dataset.coord;
+                const data = cellsMap[coord];
+
+                // Reset inline style
+                td.style.fontWeight = 'normal';
+                td.style.fontStyle = 'normal';
+                td.style.textDecoration = 'none';
+                td.style.color = '#1f1f1f';
+                td.style.backgroundColor = '#ffffff';
+                td.style.textAlign = 'left';
+                td.style.fontFamily = 'Inter, sans-serif';
+                td.style.fontSize = '13px';
+                td.style.whiteSpace = 'nowrap';
+
+                if (!data || (!data.raw && (!data.style || Object.keys(data.style).length === 0))) {
+                    td.textContent = '';
+                    return;
+                }
+
+                const evaluated = evaluateCellFormula(data.raw, cellsMap);
+                const st = data.style || {};
+
+                // Format displayed value
+                let displayStr = evaluated;
+                if (st.numFormat === 'currency' && !isNaN(parseFloat(evaluated))) {
+                    displayStr = '$' + Number(evaluated).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else if (st.numFormat === 'percent' && !isNaN(parseFloat(evaluated))) {
+                    displayStr = (Number(evaluated) * (Number(evaluated) <= 1 ? 100 : 1)).toFixed(1) + '%';
+                } else if (st.numFormat === 'comma' && !isNaN(parseFloat(evaluated))) {
+                    displayStr = Number(evaluated).toLocaleString();
+                }
+
+                td.textContent = displayStr;
+
+                // Apply cell styles
+                if (st.bold) td.style.fontWeight = '700';
+                if (st.italic) td.style.fontStyle = 'italic';
+                if (st.underline && st.strike) td.style.textDecoration = 'underline line-through';
+                else if (st.underline) td.style.textDecoration = 'underline';
+                else if (st.strike) td.style.textDecoration = 'line-through';
+
+                if (st.color) td.style.color = st.color;
+                if (st.bg) td.style.backgroundColor = st.bg;
+                if (st.align) td.style.textAlign = st.align;
+                else if (!isNaN(parseFloat(evaluated)) && String(evaluated).trim() !== '') td.style.textAlign = 'right';
+
+                if (st.fontFamily) td.style.fontFamily = st.fontFamily;
+                if (st.fontSize) td.style.fontSize = st.fontSize + 'px';
+                if (st.wrap) td.style.whiteSpace = 'normal';
+            });
+        }
+
+        /* =========================================================================
+           6. CELL SELECTION, RANGE DRAG & KEYBOARD NAVIGATION
+           ========================================================================= */
+        function handleCellMouseDown(event, coord) {
+            if (event.target.tagName === 'INPUT') return;
+            closeAllMenus();
+            isMouseSelecting = true;
+            if (event.shiftKey) {
+                selectionEndCoord = coord;
+                highlightSelectedRange();
+            } else {
+                activeCellCoord = coord;
+                selectionStartCoord = coord;
+                selectionEndCoord = coord;
+                selectCell(coord, false);
+            }
+        }
+
+        function handleCellMouseEnter(event, coord) {
+            if (!isMouseSelecting) return;
+            selectionEndCoord = coord;
+            highlightSelectedRange();
+        }
+
+        window.addEventListener('mouseup', () => {
+            isMouseSelecting = false;
+        });
+
+        function getExpandedRangeCoords(startCoord, endCoord) {
+            const m1 = startCoord.match(/^([A-Z]+)(\d+)$/i);
+            const m2 = endCoord.match(/^([A-Z]+)(\d+)$/i);
+            if (!m1 || !m2) return [startCoord];
+
+            const c1 = Math.min(letterToCol(m1[1]), letterToCol(m2[1]));
+            const c2 = Math.max(letterToCol(m1[1]), letterToCol(m2[1]));
+            const r1 = Math.min(parseInt(m1[2]), parseInt(m2[2]));
+            const r2 = Math.max(parseInt(m1[2]), parseInt(m2[2]));
+
+            const list = [];
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) {
+                    list.push(`${colToLetter(c)}${r}`);
+                }
+            }
+            return list;
+        }
+
+        function selectCell(coord, focusFormula = false) {
+            activeCellCoord = coord;
+            selectionStartCoord = coord;
+            selectionEndCoord = coord;
+            highlightSelectedRange();
+
+            const sheet = getCurrentSheet();
+            const cellObj = sheet?.cells?.[coord];
+            const formulaInput = document.getElementById('formulaBarInput');
+            if (formulaInput) {
+                formulaInput.value = cellObj?.raw || '';
+                if (focusFormula) formulaInput.focus();
+            }
+
+            // Sync toolbar button states with active cell
+            const st = cellObj?.style || {};
+            document.getElementById('fontSizeInput').value = st.fontSize || 13;
+            document.getElementById('fontFamilySelect').value = st.fontFamily || 'Inter';
+            document.getElementById('btnBold').classList.toggle('bg-slate-300', !!st.bold);
+            document.getElementById('btnItalic').classList.toggle('bg-slate-300', !!st.italic);
+            document.getElementById('btnUnderline').classList.toggle('bg-slate-300', !!st.underline);
+            document.getElementById('btnStrike').classList.toggle('bg-slate-300', !!st.strike);
+        }
+
+        function highlightSelectedRange() {
+            document.querySelectorAll('.active-cell, .in-range').forEach(el => {
+                el.classList.remove('active-cell', 'in-range');
+            });
+            document.querySelectorAll('.active-header').forEach(el => {
+                el.classList.remove('active-header');
+            });
+
+            const coords = getExpandedRangeCoords(selectionStartCoord, selectionEndCoord);
+            coords.forEach(c => {
+                const td = document.getElementById(`cell-${c}`);
+                if (td) {
+                    if (c === activeCellCoord) td.classList.add('active-cell');
+                    if (coords.length > 1) td.classList.add('in-range');
+                }
+                const m = c.match(/^([A-Z]+)(\d+)$/);
+                if (m) {
+                    document.getElementById(`col-hdr-${m[1]}`)?.classList.add('active-header');
+                    document.getElementById(`row-hdr-${m[2]}`)?.classList.add('active-header');
+                }
+            });
+
+            // Update Address Box
+            const addrBox = document.getElementById('cellAddressBox');
+            if (addrBox) {
+                addrBox.textContent = selectionStartCoord === selectionEndCoord
+                    ? activeCellCoord
+                    : `${selectionStartCoord}:${selectionEndCoord}`;
+            }
+
+            updateLiveSelectionStats(coords);
+        }
+
+        function updateLiveSelectionStats(coords) {
+            const sheet = getCurrentSheet();
+            const statsEl = document.getElementById('liveSelectionStats');
+            if (!sheet || !statsEl) return;
+
+            const nums = [];
+            let nonEmpty = 0;
+            coords.forEach(c => {
+                const raw = sheet.cells?.[c]?.raw;
+                if (raw !== undefined && String(raw).trim() !== '') {
+                    nonEmpty++;
+                    const val = evaluateCellFormula(raw, sheet.cells);
+                    const n = parseFloat(String(val).replace(/[$,₹%\s]/g, ''));
+                    if (!isNaN(n)) nums.push(n);
+                }
+            });
+
+            if (nums.length > 0) {
+                const sum = nums.reduce((a, b) => a + b, 0);
+                const avg = sum / nums.length;
+                statsEl.innerHTML = `
+                    <span>Sum: <strong class="text-[#0f9d58]">${sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                    <span>•</span>
+                    <span>Avg: <strong>${avg.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                    <span>•</span>
+                    <span>Count: <strong>${nonEmpty}</strong></span>
+                `;
+            } else if (nonEmpty > 0) {
+                statsEl.innerHTML = `<span>Count: <strong>${nonEmpty}</strong></span>`;
+            } else {
+                statsEl.innerHTML = `<span>Ready</span>`;
+            }
+        }
+
+        // Direct Double-Click Inline Cell Editor
+        function startInlineEdit(coord) {
+            const td = document.getElementById(`cell-${coord}`);
+            if (!td) return;
+            const sheet = getCurrentSheet();
+            const currentRaw = sheet?.cells?.[coord]?.raw || '';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'cell-inline-editor';
+            input.value = currentRaw;
+
+            const commit = () => {
+                if (!input.parentNode) return;
+                const val = input.value;
+                input.remove();
+                setCellValue(coord, val);
+            };
+
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commit();
+                    moveSelectionByOffset(1, 0);
+                } else if (e.key === 'Escape') {
+                    input.remove();
+                    refreshAllRenderedCells();
+                }
+            });
+
+            td.appendChild(input);
+            input.focus();
+            input.select();
+        }
+
+        function setCellValue(coord, rawVal) {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            if (!sheet.cells[coord]) {
+                sheet.cells[coord] = { raw: '', style: {} };
+            }
+            sheet.cells[coord].raw = rawVal;
+
+            const formulaInput = document.getElementById('formulaBarInput');
+            if (formulaInput && coord === activeCellCoord) {
+                formulaInput.value = rawVal;
+            }
+
+            refreshAllRenderedCells();
+            highlightSelectedRange();
+            saveSpreadsheetsToStorage(true);
+        }
+
+        // Sync Formula Bar Input
+        document.getElementById('formulaBarInput')?.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                setCellValue(activeCellCoord, this.value);
+                moveSelectionByOffset(1, 0);
+            }
+        });
+
+        document.getElementById('formulaBarInput')?.addEventListener('input', function() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            if (!sheet.cells[activeCellCoord]) sheet.cells[activeCellCoord] = { raw: '', style: {} };
+            sheet.cells[activeCellCoord].raw = this.value;
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+        });
+
+        function moveSelectionByOffset(rowDelta, colDelta) {
+            const m = activeCellCoord.match(/^([A-Z]+)(\d+)$/);
+            if (!m) return;
+            const sheet = getCurrentSheet();
+            const maxR = sheet?.rows || defaultRowsCount;
+
+            const nextCol = Math.max(0, Math.min(NUM_COLS - 1, letterToCol(m[1]) + colDelta));
+            const nextRow = Math.max(1, Math.min(maxR, parseInt(m[2]) + rowDelta));
+            const nextCoord = `${colToLetter(nextCol)}${nextRow}`;
+            selectCell(nextCoord, false);
+
+            const td = document.getElementById(`cell-${nextCoord}`);
+            td?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+
+        // Global Keyboard Navigation & Shortcuts in Editor View
+        window.addEventListener('keydown', (e) => {
+            const editorVisible = !document.getElementById('editorView').classList.contains('hidden');
+            if (!editorVisible) return;
+
+            const activeTag = document.activeElement?.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+            if (e.ctrlKey || e.metaKey) {
+                const k = e.key.toLowerCase();
+                if (k === 'b') { e.preventDefault(); applyStyleToSelection('bold'); return; }
+                if (k === 'i') { e.preventDefault(); applyStyleToSelection('italic'); return; }
+                if (k === 'u') { e.preventDefault(); applyStyleToSelection('underline'); return; }
+                if (k === 'z') { e.preventDefault(); undoAction(); return; }
+                if (k === 'y') { e.preventDefault(); redoAction(); return; }
+                if (k === 'c') { e.preventDefault(); copySelectedCells(); return; }
+                if (k === 'v') { e.preventDefault(); pasteClipboardCells(); return; }
+                if (k === 'f') { e.preventDefault(); openFindReplaceModal(); return; }
+                return;
+            }
+
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveSelectionByOffset(1, 0); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelectionByOffset(-1, 0); }
+            else if (e.key === 'ArrowRight' || e.key === 'Tab') { e.preventDefault(); moveSelectionByOffset(0, 1); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); moveSelectionByOffset(0, -1); }
+            else if (e.key === 'Enter') { e.preventDefault(); startInlineEdit(activeCellCoord); }
+            else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); clearSelectedRangeValues(); }
+            else if (e.key.length === 1 && !e.altKey) {
+                startInlineEdit(activeCellCoord);
+            }
+        });
+
+        /* =========================================================================
+           7. FORMATTING, AUTOSUM, SORTING & TABLE STYLING
+           ========================================================================= */
+        function pushUndoSnapshot() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            undoStack.push(JSON.stringify(sheet.cells));
+            if (undoStack.length > 30) undoStack.shift();
+            redoStack = [];
+        }
+
+        function undoAction() {
+            const sheet = getCurrentSheet();
+            if (!sheet || undoStack.length === 0) return;
+            redoStack.push(JSON.stringify(sheet.cells));
+            sheet.cells = JSON.parse(undoStack.pop());
+            refreshAllRenderedCells();
+            highlightSelectedRange();
+            saveSpreadsheetsToStorage(true);
+            showToast('Undid last change');
+        }
+
+        function redoAction() {
+            const sheet = getCurrentSheet();
+            if (!sheet || redoStack.length === 0) return;
+            undoStack.push(JSON.stringify(sheet.cells));
+            sheet.cells = JSON.parse(redoStack.pop());
+            refreshAllRenderedCells();
+            highlightSelectedRange();
+            saveSpreadsheetsToStorage(true);
+            showToast('Redid change');
+        }
+
+        function applyStyleToSelection(prop, value = null) {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            const coords = getExpandedRangeCoords(selectionStartCoord, selectionEndCoord);
+            coords.forEach(c => {
+                if (!sheet.cells[c]) sheet.cells[c] = { raw: '', style: {} };
+                if (!sheet.cells[c].style) sheet.cells[c].style = {};
+                const st = sheet.cells[c].style;
+
+                if (['bold', 'italic', 'underline', 'strike', 'wrap'].includes(prop)) {
+                    st[prop] = !st[prop];
+                } else {
+                    st[prop] = value;
+                }
+            });
+
+            refreshAllRenderedCells();
+            selectCell(activeCellCoord, false);
+            saveSpreadsheetsToStorage(true);
+        }
+
+        function changeFontSize(delta) {
+            const current = parseInt(document.getElementById('fontSizeInput').value) || 13;
+            const next = Math.max(8, Math.min(36, current + delta));
+            document.getElementById('fontSizeInput').value = next;
+            applyStyleToSelection('fontSize', next);
+        }
+
+        function formatSelectionNumber(formatType) {
+            applyStyleToSelection('numFormat', formatType);
+        }
+
+        function formatSelectionAsTable() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            const m1 = selectionStartCoord.match(/^([A-Z]+)(\d+)$/);
+            const m2 = selectionEndCoord.match(/^([A-Z]+)(\d+)$/);
+            if (!m1 || !m2) return;
+
+            const c1 = Math.min(letterToCol(m1[1]), letterToCol(m2[1]));
+            const c2 = Math.max(letterToCol(m1[1]), letterToCol(m2[1]));
+            const r1 = Math.min(parseInt(m1[2]), parseInt(m2[2]));
+            const r2 = Math.max(parseInt(m1[2]), parseInt(m2[2]));
+
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) {
+                    const coord = `${colToLetter(c)}${r}`;
+                    if (!sheet.cells[coord]) sheet.cells[coord] = { raw: '', style: {} };
+                    if (r === r1) {
+                        sheet.cells[coord].style = { ...sheet.cells[coord].style, bold: true, bg: '#0f9d58', color: '#ffffff' };
+                    } else {
+                        sheet.cells[coord].style = { ...sheet.cells[coord].style, bg: (r - r1) % 2 === 1 ? '#ffffff' : '#e6f4ea', color: '#1f1f1f' };
+                    }
+                }
+            }
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+            showToast('Formatted selection as alternating table');
+        }
+
+        function clearSelectionFormatting() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+            getExpandedRangeCoords(selectionStartCoord, selectionEndCoord).forEach(c => {
+                if (sheet.cells[c]) sheet.cells[c].style = {};
+            });
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+        }
+
+        function clearSelectedRangeValues() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+            getExpandedRangeCoords(selectionStartCoord, selectionEndCoord).forEach(c => {
+                if (sheet.cells[c]) sheet.cells[c].raw = '';
+            });
+            document.getElementById('formulaBarInput').value = '';
+            refreshAllRenderedCells();
+            highlightSelectedRange();
+            saveSpreadsheetsToStorage(true);
+        }
+
+        function insertQuickFormula(fnName) {
+            if (selectionStartCoord !== selectionEndCoord) {
+                const m2 = selectionEndCoord.match(/^([A-Z]+)(\d+)$/);
+                const targetCoord = `${m2[1]}${parseInt(m2[2]) + 1}`;
+                const formula = `=${fnName}(${selectionStartCoord}:${selectionEndCoord})`;
+                setCellValue(targetCoord, formula);
+                selectCell(targetCoord, false);
+                showToast(`Inserted ${formula} in ${targetCoord}`);
+            } else {
+                const m = activeCellCoord.match(/^([A-Z]+)(\d+)$/);
+                const r = parseInt(m[2]);
+                const range = r > 1 ? `${m[1]}1:${m[1]}${r - 1}` : 'A1:A5';
+                const formula = `=${fnName}(${range})`;
+                setCellValue(activeCellCoord, formula);
+                selectCell(activeCellCoord, true);
+            }
+        }
+
+        function sortSheetByActiveColumn(direction = 'asc') {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            const m = activeCellCoord.match(/^([A-Z]+)(\d+)$/);
+            const sortCol = m ? m[1] : 'A';
+            const maxRow = sheet.rows || defaultRowsCount;
+
+            // Keep Row 1 if it looks like a header, sort rows 2..maxRow that have content
+            const populatedRows = [];
+            for (let r = 2; r <= maxRow; r++) {
+                const rowData = {};
+                let hasAny = false;
+                for (let c = 0; c < NUM_COLS; c++) {
+                    const colL = colToLetter(c);
+                    const cell = sheet.cells[`${colL}${r}`];
+                    if (cell && (cell.raw || Object.keys(cell.style || {}).length)) {
+                        rowData[colL] = JSON.parse(JSON.stringify(cell));
+                        if (cell.raw) hasAny = true;
+                    }
+                }
+                if (hasAny) populatedRows.push(rowData);
+            }
+
+            populatedRows.sort((a, b) => {
+                const vA = String(a[sortCol]?.raw || '').toLowerCase();
+                const vB = String(b[sortCol]?.raw || '').toLowerCase();
+                const nA = parseFloat(vA);
+                const nB = parseFloat(vB);
+                if (!isNaN(nA) && !isNaN(nB)) {
+                    return direction === 'asc' ? nA - nB : nB - nA;
+                }
+                return direction === 'asc' ? vA.localeCompare(vB) : vB.localeCompare(vA);
+            });
+
+            // Clear rows >= 2 and rewrite sorted
+            for (let r = 2; r <= maxRow; r++) {
+                for (let c = 0; c < NUM_COLS; c++) {
+                    delete sheet.cells[`${colToLetter(c)}${r}`];
+                }
+            }
+            populatedRows.forEach((rowObj, idx) => {
+                const targetRow = idx + 2;
+                Object.keys(rowObj).forEach(colL => {
+                    sheet.cells[`${colL}${targetRow}`] = rowObj[colL];
+                });
+            });
+
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+            showToast(`Sorted Column ${sortCol} (${direction === 'asc' ? 'A → Z' : 'Z → A'})`);
+        }
+
+        function transformSelectionCase(mode) {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+            getExpandedRangeCoords(selectionStartCoord, selectionEndCoord).forEach(c => {
+                const raw = sheet.cells?.[c]?.raw;
+                if (raw && !String(raw).startsWith('=')) {
+                    sheet.cells[c].raw = mode === 'upper' ? String(raw).toUpperCase() : String(raw).toLowerCase();
+                }
+            });
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+        }
+
+        /* =========================================================================
+           8. COPY / PASTE, INSERT ROWS, SHEET TABS & VIEW CONTROLS
+           ========================================================================= */
+        function copySelectedCells() {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            const coords = getExpandedRangeCoords(selectionStartCoord, selectionEndCoord);
+            internalClipboard = coords.map(c => ({
+                coord: c,
+                data: sheet.cells[c] ? JSON.parse(JSON.stringify(sheet.cells[c])) : { raw: '', style: {} }
+            }));
+            showToast(`Copied ${coords.length} cell(s)`);
+        }
+
+        function pasteClipboardCells() {
+            if (!internalClipboard || internalClipboard.length === 0) return;
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            const firstMatch = internalClipboard[0].coord.match(/^([A-Z]+)(\d+)$/);
+            const targetMatch = activeCellCoord.match(/^([A-Z]+)(\d+)$/);
+            const colOffset = letterToCol(targetMatch[1]) - letterToCol(firstMatch[1]);
+            const rowOffset = parseInt(targetMatch[2]) - parseInt(firstMatch[2]);
+
+            internalClipboard.forEach(item => {
+                const m = item.coord.match(/^([A-Z]+)(\d+)$/);
+                const nextCol = letterToCol(m[1]) + colOffset;
+                const nextRow = parseInt(m[2]) + rowOffset;
+                if (nextCol >= 0 && nextCol < NUM_COLS && nextRow >= 1) {
+                    const dest = `${colToLetter(nextCol)}${nextRow}`;
+                    sheet.cells[dest] = JSON.parse(JSON.stringify(item.data));
+                }
+            });
+
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+            showToast('Pasted cells');
+        }
+
+        function addMoreRows(count = 20) {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            sheet.rows = (sheet.rows || defaultRowsCount) + count;
+            buildGridDOM();
+            selectCell(activeCellCoord, false);
+            saveSpreadsheetsToStorage(true);
+            showToast(`➕ Added ${count} more rows`);
+        }
+
+        function insertRowAtActive(above = true) {
+            const sheet = getCurrentSheet();
+            if (!sheet) return;
+            pushUndoSnapshot();
+
+            const m = activeCellCoord.match(/^([A-Z]+)(\d+)$/);
+            const pivotRow = above ? parseInt(m[2]) : parseInt(m[2]) + 1;
+            const newCells = {};
+
+            Object.keys(sheet.cells).forEach(coord => {
+                const cm = coord.match(/^([A-Z]+)(\d+)$/);
+                if (!cm) return;
+                const r = parseInt(cm[2]);
+                if (r >= pivotRow) {
+                    newCells[`${cm[1]}${r + 1}`] = sheet.cells[coord];
+                } else {
+                    newCells[coord] = sheet.cells[coord];
+                }
+            });
+
+            sheet.cells = newCells;
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+            showToast('➕ Inserted new row');
+        }
+
+        function insertCurrentDate() {
+            setCellValue(activeCellCoord, new Date().toISOString().slice(0, 10));
+        }
+
+        function selectEntireColumn(colLetter) {
+            const sheet = getCurrentSheet();
+            const maxR = sheet?.rows || defaultRowsCount;
+            activeCellCoord = `${colLetter}1`;
+            selectionStartCoord = `${colLetter}1`;
+            selectionEndCoord = `${colLetter}${maxR}`;
+            highlightSelectedRange();
+        }
+
+        function selectEntireRow(rowNum) {
+            activeCellCoord = `A${rowNum}`;
+            selectionStartCoord = `A${rowNum}`;
+            selectionEndCoord = `Z${rowNum}`;
+            highlightSelectedRange();
+        }
+
+        function selectAllCellsInSheet() {
+            const sheet = getCurrentSheet();
+            const maxR = sheet?.rows || defaultRowsCount;
+            activeCellCoord = 'A1';
+            selectionStartCoord = 'A1';
+            selectionEndCoord = `Z${maxR}`;
+            highlightSelectedRange();
+        }
+
+        // Bottom Sheet Tabs Management
+        function renderSheetTabsBar() {
+            const doc = getCurrentDoc();
+            const bar = document.getElementById('sheetTabsBar');
+            if (!doc || !bar) return;
+
+            bar.innerHTML = doc.sheets.map((sh, idx) => {
+                const isActive = idx === (doc.activeSheetIndex || 0);
+                return `
+                    <div onclick="switchSheetTab(${idx})" class="px-3.5 py-1 rounded-t-lg border-b-2 flex items-center gap-2 cursor-pointer transition ${isActive ? 'bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8] font-semibold' : 'bg-white hover:bg-slate-100 border-transparent text-slate-600'}">
+                        <span>${escapeHtml(sh.name)}</span>
+                        ${doc.sheets.length > 1 ? `
+                            <button onclick="event.stopPropagation(); deleteSheetTab(${idx})" class="text-[10px] text-slate-400 hover:text-rose-600">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addNewSheetTab() {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            const nextNum = doc.sheets.length + 1;
+            doc.sheets.push({
+                name: `Sheet${nextNum}`,
+                rows: 45,
+                cells: {}
+            });
+            doc.activeSheetIndex = doc.sheets.length - 1;
+            activeCellCoord = 'A1';
+            selectionStartCoord = 'A1';
+            selectionEndCoord = 'A1';
+            saveSpreadsheetsToStorage(true);
+            renderFullSpreadsheetEditor();
+            showToast(`➕ Created Sheet${nextNum}`);
+        }
+
+        function switchSheetTab(idx) {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            doc.activeSheetIndex = idx;
+            activeCellCoord = 'A1';
+            selectionStartCoord = 'A1';
+            selectionEndCoord = 'A1';
+            saveSpreadsheetsToStorage(false);
+            renderFullSpreadsheetEditor();
+        }
+
+        function deleteSheetTab(idx) {
+            const doc = getCurrentDoc();
+            if (!doc || doc.sheets.length <= 1) return;
+            doc.sheets.splice(idx, 1);
+            doc.activeSheetIndex = Math.max(0, doc.activeSheetIndex - 1);
+            saveSpreadsheetsToStorage(true);
+            renderFullSpreadsheetEditor();
+        }
+
+        function renameCurrentSpreadsheet(newTitle) {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            doc.title = newTitle.trim() || 'Untitled spreadsheet';
+            doc.updatedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            saveSpreadsheetsToStorage(true);
+        }
+
+        function toggleStarCurrentSheet() {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            doc.starred = !doc.starred;
+            saveSpreadsheetsToStorage(true);
+            renderFullSpreadsheetEditor();
+        }
+
+        function duplicateCurrentSpreadsheet() {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            const copy = JSON.parse(JSON.stringify(doc));
+            copy.id = 'sheet-' + Date.now();
+            copy.title = doc.title + ' (Copy)';
+            allSpreadsheets.unshift(copy);
+            currentDocId = copy.id;
+            saveSpreadsheetsToStorage(true);
+            renderFullSpreadsheetEditor();
+            showToast('➕ Created a copy of this spreadsheet');
+        }
+
+        function toggleGridlines() {
+            showGridlinesState = !showGridlinesState;
+            document.getElementById('spreadsheetTable').classList.toggle('hide-gridlines', !showGridlinesState);
+            document.getElementById('gridlinesCheck').textContent = showGridlinesState ? '✓' : '';
+        }
+
+        function toggleFormulaBarVisibility() {
+            const bar = document.getElementById('formulaBarContainer');
+            bar.classList.toggle('hidden');
+            document.getElementById('formulaBarCheck').textContent = bar.classList.contains('hidden') ? '' : '✓';
+        }
+
+        function setGridZoom(zoomPercent) {
+            const tbl = document.getElementById('spreadsheetTable');
+            tbl.style.zoom = `${zoomPercent}%`;
+            document.getElementById('zoomSelect').value = String(zoomPercent);
+        }
+
+        /* =========================================================================
+           9. FIND & REPLACE, CSV / JSON EXPORT & IMPORT
+           ========================================================================= */
+        function openFindReplaceModal() {
+            document.getElementById('findStatusMessage').textContent = '';
+            document.getElementById('findReplaceModal').classList.remove('hidden');
+            document.getElementById('findTextInput').focus();
+        }
+
+        function closeFindReplaceModal() {
+            document.getElementById('findReplaceModal').classList.add('hidden');
+        }
+
+        function findNextCellMatch() {
+            const query = document.getElementById('findTextInput').value.trim().toLowerCase();
+            if (!query) return;
+            const sheet = getCurrentSheet();
+            const keys = Object.keys(sheet.cells || {});
+            for (const coord of keys) {
+                const raw = String(sheet.cells[coord]?.raw || '').toLowerCase();
+                if (raw.includes(query)) {
+                    selectCell(coord, false);
+                    document.getElementById(`cell-${coord}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.getElementById('findStatusMessage').textContent = `Found match in cell ${coord}`;
+                    return;
+                }
+            }
+            document.getElementById('findStatusMessage').textContent = 'No matching cells found.';
+        }
+
+        function replaceAllCellMatches() {
+            const findStr = document.getElementById('findTextInput').value;
+            const replaceStr = document.getElementById('replaceTextInput').value;
+            if (!findStr) return;
+
+            const sheet = getCurrentSheet();
+            pushUndoSnapshot();
+            let count = 0;
+
+            Object.keys(sheet.cells || {}).forEach(coord => {
+                const raw = String(sheet.cells[coord]?.raw || '');
+                if (raw.includes(findStr)) {
+                    sheet.cells[coord].raw = raw.split(findStr).join(replaceStr);
+                    count++;
+                }
+            });
+
+            refreshAllRenderedCells();
+            saveSpreadsheetsToStorage(true);
+            document.getElementById('findStatusMessage').textContent = `Replaced ${count} occurrence(s).`;
+        }
+
+        function exportCurrentSheetCSV() {
+            const doc = getCurrentDoc();
+            const sheet = getCurrentSheet();
+            if (!doc || !sheet) return;
+
+            let maxR = 1;
+            let maxC = 0;
+            Object.keys(sheet.cells).forEach(coord => {
+                if (!sheet.cells[coord]?.raw) return;
+                const m = coord.match(/^([A-Z]+)(\d+)$/);
+                if (m) {
+                    maxC = Math.max(maxC, letterToCol(m[1]));
+                    maxR = Math.max(maxR, parseInt(m[2]));
+                }
+            });
+
+            const csvRows = [];
+            for (let r = 1; r <= maxR; r++) {
+                const rowVals = [];
+                for (let c = 0; c <= maxC; c++) {
+                    const coord = `${colToLetter(c)}${r}`;
+                    const evaluated = evaluateCellFormula(sheet.cells[coord]?.raw || '', sheet.cells);
+                    const escaped = String(evaluated).replace(/"/g, '""');
+                    rowVals.push(`"${escaped}"`);
+                }
+                csvRows.push(rowVals.join(','));
+            }
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${doc.title.replace(/[^a-z0-9_-]+/gi, '_')}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Downloaded .CSV file');
+        }
+
+        function exportCurrentSheetJSON() {
+            const doc = getCurrentDoc();
+            if (!doc) return;
+            const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${doc.title.replace(/[^a-z0-9_-]+/gi, '_')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Downloaded workbook (.JSON)');
+        }
+
+        function exportAllSheetsBackup() {
+            const payload = {
+                app: 'NTURN Sheets',
+                exportedAt: new Date().toISOString(),
+                spreadsheets: allSpreadsheets
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NTURN-Sheets-Backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Exported all NTURN Sheets backup (.JSON)');
+        }
+
+        function importSpreadsheetFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const content = e.target.result;
+                if (file.name.toLowerCase().endsWith('.json')) {
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (parsed.spreadsheets && Array.isArray(parsed.spreadsheets)) {
+                            allSpreadsheets = parsed.spreadsheets;
+                        } else if (parsed.sheets) {
+                            parsed.id = 'sheet-' + Date.now();
+                            allSpreadsheets.unshift(parsed);
+                        }
+                        saveSpreadsheetsToStorage(true);
+                        renderRecentSpreadsheets();
+                        showToast('Imported JSON spreadsheet backup!');
+                    } catch (err) {
+                        showToast('Invalid JSON file format', 'error');
+                    }
+                } else {
+                    // Parse CSV into a new spreadsheet
+                    const lines = content.split(/\r?\n/);
+                    const cells = {};
+                    lines.forEach((line, rIdx) => {
+                        if (!line.trim()) return;
+                        const cols = line.split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                        cols.forEach((val, cIdx) => {
+                            if (cIdx < NUM_COLS && val !== '') {
+                                cells[`${colToLetter(cIdx)}${rIdx + 1}`] = { raw: val, style: rIdx === 0 ? { bold: true, bg: '#e6f4ea' } : {} };
+                            }
+                        });
+                    });
+
+                    const newDoc = {
+                        id: 'sheet-' + Date.now(),
+                        title: file.name.replace(/\.csv$/i, ''),
+                        owner: 'me',
+                        starred: false,
+                        updatedAt: 'Imported',
+                        activeSheetIndex: 0,
+                        sheets: [{ name: 'Sheet1', rows: Math.max(45, lines.length + 10), cells }]
+                    };
+                    allSpreadsheets.unshift(newDoc);
+                    saveSpreadsheetsToStorage(true);
+                    openSpreadsheetById(newDoc.id);
+                    showToast(`Imported "${file.name}"`);
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        /* =========================================================================
+           10. MENU BAR DROPDOWN & TOAST HELPERS
+           ========================================================================= */
+        function toggleMenuDropdown(event, btnEl) {
+            event.stopPropagation();
+            const wrapper = btnEl.closest('.menu-item-wrapper');
+            const wasOpen = wrapper.classList.contains('open');
+            closeAllMenus();
+            if (!wasOpen) wrapper.classList.add('open');
+        }
+
+        function closeAllMenus() {
+            document.querySelectorAll('.menu-item-wrapper.open').forEach(el => el.classList.remove('open'));
+        }
+
+        window.addEventListener('click', () => closeAllMenus());
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium text-white flex items-center gap-2 transition ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check text-[#0f9d58]'}"></i><span>${escapeHtml(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Initialize NTURN Sheets on Window Load
+        window.onload = function() {
+            loadSpreadsheetsFromStorage();
+            currentDocId = allSpreadsheets[0]?.id;
+            renderRecentSpreadsheets();
+        };
+    </script>
+</body>
+</html>

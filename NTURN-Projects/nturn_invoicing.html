@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTURN Invoicing — Professional Client Bills & GST Receipts</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        plum: {
+                            DEFAULT: '#714B67',
+                            hover: '#5d3d54',
+                            light: '#f5eff4'
+                        },
+                        inv: {
+                            DEFAULT: '#4f46e5', /* Indigo 600 */
+                            hover: '#4338ca',   /* Indigo 700 */
+                            light: '#e0e7ff'    /* Indigo 100 */
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @media print {
+            header, nav, .no-print {
+                display: none !important;
+            }
+            body {
+                background: #ffffff !important;
+            }
+            #invoicePrintableCard {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- =========================================================================
+         VIEW 1: BUSINESS SELECTOR / HOME DASHBOARD
+         ========================================================================= -->
+    <div id="businessSelectorView" class="min-h-screen flex flex-col bg-slate-50">
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-plum hover:bg-plum-hover shadow-2xs transition" title="Return to NTURN Projects Hub">
+                    <span class="text-amber-300 text-xs">➕</span>
+                    <span>NTURN Projects</span>
+                </a>
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shadow-2xs">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <span class="font-bold text-base sm:text-lg text-slate-800 tracking-tight">Invoicing Workspaces</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openNewBusinessModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">Add Workspace</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-10">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">Billing &amp; Invoice Hubs</h1>
+                <p class="text-slate-500 text-sm">Select a company profile to generate tax invoices or add a new business workspace.</p>
+            </div>
+
+            <div id="businessListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <!-- Business Cards populated via JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         VIEW 2: ACTIVE BUSINESS INVOICING WORKSPACE
+         ========================================================================= -->
+    <div id="activeBusinessView" class="hidden min-h-screen flex flex-col bg-slate-50">
+        
+        <!-- TOP NAVIGATION HEADER -->
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-2xs">
+            <!-- Left: Back to Home + Active Business Name -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button onclick="switchView('home')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition" title="Back to All Workspaces">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span class="hidden sm:inline">Workspaces</span>
+                </button>
+
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+
+                <div class="flex items-center gap-2 max-w-[150px] sm:max-w-xs cursor-pointer" onclick="openRenameBusinessModal()">
+                    <div class="w-8 h-8 rounded-lg bg-inv text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span id="activeBusinessNameDisplay" class="font-bold text-base sm:text-lg text-slate-800 tracking-tight truncate hover:text-inv transition" title="Click to edit profile">Business Name</span>
+                </div>
+            </div>
+
+            <!-- Center: 4 Main Tabs (Dashboard, Invoices, Clients, Settings) -->
+            <nav class="flex items-center bg-slate-100 p-1 rounded-xl w-full sm:w-auto order-3 lg:order-2 justify-center overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-inv shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-pie"></i> <span>Overview</span>
+                </button>
+                <button onclick="switchTab('invoices')" id="tabBtn-invoices" class="inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-file-invoice"></i> <span>Invoices</span>
+                </button>
+                <button onclick="switchTab('clients')" id="tabBtn-clients" class="inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-users"></i> <span>Clients</span>
+                </button>
+                <button onclick="switchTab('settings')" id="tabBtn-settings" class="inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-gear"></i> <span>Tax &amp; Bank</span>
+                </button>
+            </nav>
+
+            <!-- Right: Currency + New Invoice -->
+            <div class="flex items-center gap-2 order-2 lg:order-3">
+                <select id="currencySelect" onchange="changeCurrency(this.value)" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/70 text-xs font-bold text-slate-700 border border-slate-200 focus:outline-none cursor-pointer">
+                    <option value="₹">₹ INR</option>
+                    <option value="$">$ USD</option>
+                    <option value="€">€ EUR</option>
+                    <option value="£">£ GBP</option>
+                </select>
+
+                <button onclick="openInvoiceModal()" class="px-3 sm:px-4 py-1.5 rounded-lg bg-inv hover:bg-inv-hover text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">New Invoice</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN FULL-WIDTH WORKSPACE -->
+        <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6">
+
+            <!-- =====================================================================
+                 TAB 1: INVOICING DASHBOARD
+                 ===================================================================== -->
+            <section id="view-dashboard" class="space-y-6">
+
+                <!-- Welcome & Action Banner -->
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-bold text-slate-900">Invoicing Dashboard</h1>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="fa-solid fa-check mr-1 text-[9px]"></i>Saved Locally
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Generate compliant GST/VAT tax invoices, track pending client receivables and receipts.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                        <button onclick="openInvoiceModal()" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-circle-plus text-inv"></i>
+                            <span>+ Create Invoice</span>
+                        </button>
+                        
+                        <!-- Start Fresh Button -->
+                        <button onclick="confirmStartFresh()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 border border-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition" title="Clear all invoices for this workspace">
+                            <i class="fa-solid fa-rotate-left"></i> Start Fresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Billed</span>
+                            <div class="w-8 h-8 rounded-xl bg-indigo-50 text-inv flex items-center justify-center">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalBilled" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">₹0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Across all issued invoices</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Paid Collections</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                        </div>
+                        <div id="kpiPaidCollections" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">₹0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Settled client receipts</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Unpaid / Due</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                        </div>
+                        <div id="kpiUnpaidDue" class="text-2xl sm:text-3xl font-extrabold text-amber-600 font-mono">₹0</div>
+                        <p id="kpiUnpaidCount" class="text-[11px] text-slate-500 mt-1.5">0 pending invoices</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Clients</span>
+                            <div class="w-8 h-8 rounded-xl bg-purple-50 text-plum flex items-center justify-center">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalClients" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Registered client accounts</p>
+                    </div>
+                </div>
+
+                <!-- Recent Invoices Table -->
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-sm sm:text-base text-slate-800">Recent Invoices</h3>
+                        <button onclick="switchTab('invoices')" class="text-xs font-semibold text-inv hover:underline">
+                            View All Invoices →
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-5 py-3">Invoice #</th>
+                                    <th class="px-5 py-3">Date</th>
+                                    <th class="px-5 py-3">Client</th>
+                                    <th class="px-5 py-3">Due Date</th>
+                                    <th class="px-5 py-3">Status</th>
+                                    <th class="px-5 py-3 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentInvoicesTbody" class="divide-y divide-slate-100">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 2: INVOICES LEDGER
+                 ===================================================================== -->
+            <section id="view-invoices" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
+                        <button onclick="setInvoiceFilter('all')" id="flt-inv-all" class="inv-flt-btn px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition whitespace-nowrap">All Bills</button>
+                        <button onclick="setInvoiceFilter('Unpaid')" id="flt-inv-Unpaid" class="inv-flt-btn px-3 py-1.5 rounded-lg text-amber-700 hover:bg-white/60 transition whitespace-nowrap">⏳ Unpaid / Due</button>
+                        <button onclick="setInvoiceFilter('Paid')" id="flt-inv-Paid" class="inv-flt-btn px-3 py-1.5 rounded-lg text-emerald-700 hover:bg-white/60 transition whitespace-nowrap">✅ Paid</button>
+                        <button onclick="setInvoiceFilter('Draft')" id="flt-inv-Draft" class="inv-flt-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white/60 transition whitespace-nowrap">📝 Drafts</button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 sm:w-60">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="invoiceSearchInput" oninput="renderInvoicesTable()" placeholder="Search invoice # or client..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:bg-white focus:border-inv">
+                        </div>
+                        <button onclick="openInvoiceModal()" class="px-3.5 py-1.5 rounded-xl bg-inv hover:bg-inv-hover text-white text-xs font-semibold transition whitespace-nowrap">+ New Invoice</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-4 py-3.5">Invoice #</th>
+                                    <th class="px-4 py-3.5">Issue Date</th>
+                                    <th class="px-4 py-3.5">Client Name</th>
+                                    <th class="px-4 py-3.5">Due Date</th>
+                                    <th class="px-4 py-3.5">Status</th>
+                                    <th class="px-4 py-3.5 text-right">Tax (GST)</th>
+                                    <th class="px-4 py-3.5 text-right">Grand Total</th>
+                                    <th class="px-4 py-3.5 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullInvoicesTbody" class="divide-y divide-slate-100">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 3: CLIENTS DIRECTORY
+                 ===================================================================== -->
+            <section id="view-clients" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-bold text-slate-800">Client Accounts</h2>
+                        <span id="clientCountBadge" class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-md">0</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 sm:w-64">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="clientSearchInput" oninput="renderClientsList()" placeholder="Search client or GSTIN..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:bg-white focus:border-inv">
+                        </div>
+                        <button onclick="openClientModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition whitespace-nowrap">+ Add Client</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="clientsGridContainer">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 4: TAX & BANK SETTINGS
+                 ===================================================================== -->
+            <section id="view-settings" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 max-w-2xl mx-auto space-y-5">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Company Billing Profile</h2>
+                        <p class="text-xs text-slate-500">This information will automatically appear on your generated invoices and receipts.</p>
+                    </div>
+
+                    <div class="space-y-4 text-xs sm:text-sm">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Company / Trade Name *</label>
+                            <input type="text" id="cfgCompanyName" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-inv font-semibold">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">GSTIN / Tax ID</label>
+                                <input type="text" id="cfgGstin" placeholder="07AAAAA0000A1Z5" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-inv">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Default GST Rate (%)</label>
+                                <select id="cfgDefaultTax" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-inv">
+                                    <option value="0">0% (Exempt)</option>
+                                    <option value="5">5% GST</option>
+                                    <option value="12">12% GST</option>
+                                    <option value="18" selected>18% GST (Standard)</option>
+                                    <option value="28">28% GST</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Billing Address</label>
+                            <textarea id="cfgAddress" rows="2" placeholder="Suite 400, Sector 62, Noida, UP..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-inv resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Bank Payment Details &amp; UPI ID</label>
+                            <textarea id="cfgBankDetails" rows="2" placeholder="Bank: HDFC Bank | A/C: 50200012345678 | IFSC: HDFC0001234 | UPI: payment@upi" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-mono text-xs focus:outline-none focus:bg-white focus:border-inv resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex justify-end">
+                        <button onclick="saveBillingProfile()" class="px-5 py-2.5 rounded-xl bg-inv hover:bg-inv-hover text-white text-xs font-semibold shadow-2xs transition">Save Profile</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         PRINTABLE INVOICE / RECEIPT OVERLAY
+         ========================================================================= -->
+    <div id="invoicePrintableCard" class="hidden print:block p-8 bg-white max-w-3xl mx-auto">
+        <!-- Rendered dynamically during print/view -->
+    </div>
+
+    <!-- =========================================================================
+         MODALS
+         ========================================================================= -->
+
+    <!-- New Business Workspace Modal -->
+    <div id="newBusinessModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeNewBusinessModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Add Invoicing Workspace</h3>
+                <button onclick="closeNewBusinessModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Company / Brand Name</label>
+                    <input type="text" id="newBusinessNameInput" placeholder="e.g. Apex Digital Corp" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-inv font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeNewBusinessModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveNewBusiness()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Business Modal -->
+    <div id="renameBusinessModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeRenameBusinessModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Rename Workspace</h3>
+                <button onclick="closeRenameBusinessModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <input type="text" id="renameBusinessInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-inv font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-2">
+                <button onclick="deleteCurrentBusiness()" class="text-xs font-semibold text-rose-600 hover:text-rose-700"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                <div class="flex gap-2">
+                    <button onclick="closeRenameBusinessModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                    <button onclick="saveRenamedBusiness()" class="px-4 py-2 rounded-xl bg-inv hover:bg-inv-hover text-white text-xs font-semibold shadow-sm transition">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Add/Edit Modal -->
+    <div id="invoiceModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto" onclick="closeInvoiceModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-auto" onclick="event.stopPropagation()">
+            
+            <div class="px-5 sm:px-6 py-4 bg-inv text-white flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-file-invoice text-lg"></i>
+                    <h3 id="invoiceModalTitle" class="font-bold text-base">Generate Tax Invoice</h3>
+                </div>
+                <button onclick="closeInvoiceModal()" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 sm:p-6 space-y-4 text-xs sm:text-sm max-h-[72vh] overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Invoice Number *</label>
+                        <input type="text" id="invNumberInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-800 focus:outline-none focus:border-inv focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Client *</label>
+                        <select id="invClientSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-inv focus:bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Invoice Date *</label>
+                        <input type="date" id="invDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-inv focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Due Date</label>
+                        <input type="date" id="invDueDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-inv focus:bg-white">
+                    </div>
+                </div>
+
+                <!-- Line Items Table -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700">Line Items &amp; Services</label>
+                        <button onclick="addInvoiceItemRow()" class="text-xs font-semibold text-inv hover:underline">+ Add Item</button>
+                    </div>
+                    
+                    <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="border-b border-slate-200 text-[10px] uppercase text-slate-500 font-semibold bg-slate-100">
+                                <tr>
+                                    <th class="px-3 py-2">Item Description</th>
+                                    <th class="px-3 py-2 w-16">Qty</th>
+                                    <th class="px-3 py-2 w-24">Rate</th>
+                                    <th class="px-3 py-2 w-20">GST %</th>
+                                    <th class="px-3 py-2 w-24 text-right">Total</th>
+                                    <th class="px-3 py-2 w-8 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceItemsTbody" class="divide-y divide-slate-100 bg-white">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Calculation Summary & Payment Status -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+                            <select id="invStatusSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-inv focus:bg-white">
+                                <option value="Unpaid">⏳ Unpaid / Due</option>
+                                <option value="Paid">✅ Paid</option>
+                                <option value="Draft">📝 Draft</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Payment Notes / Terms</label>
+                            <input type="text" id="invNotesInput" placeholder="Payment due within 15 days via NEFT/UPI" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-inv focus:bg-white">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-600">
+                            <span>Subtotal:</span>
+                            <span id="calcSubtotal" class="font-mono font-semibold">₹0</span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Estimated Tax (GST):</span>
+                            <span id="calcTax" class="font-mono font-semibold">₹0</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-200">
+                            <span>Grand Total:</span>
+                            <span id="calcGrandTotal" class="font-mono text-base text-inv">₹0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2 sticky bottom-0 z-10">
+                <button onclick="closeInvoiceModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveInvoice()" class="px-6 py-2 rounded-xl bg-inv hover:bg-inv-hover text-white text-xs font-semibold shadow-sm transition">Save Invoice</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Add/Edit Modal -->
+    <div id="clientModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onclick="closeClientModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 id="clientModalTitle" class="font-bold text-slate-800">Add Client Account</h3>
+                <button onclick="closeClientModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs sm:text-sm">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Client / Business Name *</label>
+                    <input type="text" id="clientNameInput" placeholder="TechCorp Global" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:border-inv focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">GSTIN / Tax Registration</label>
+                    <input type="text" id="clientGstinInput" placeholder="09AAACH7409R1ZZ" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 focus:outline-none focus:border-inv focus:bg-white">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Phone</label>
+                        <input type="text" id="clientPhoneInput" placeholder="+91..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-inv focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Email</label>
+                        <input type="email" id="clientEmailInput" placeholder="billing@client.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-inv focus:bg-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Billing Address</label>
+                    <textarea id="clientAddressInput" rows="2" placeholder="Street, City, State..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-inv focus:bg-white resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeClientModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveClient()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">Save Client</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Fresh Confirm Modal -->
+    <div id="startFreshModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeStartFreshModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6" onclick="event.stopPropagation()">
+            <div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-3xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Reset Invoicing?</h3>
+            <p class="text-sm text-slate-500 mb-6">Are you sure you want to clear all invoices and clients for this workspace? This action cannot be undone.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeStartFreshModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="executeStartFresh()" class="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 shadow-md transition">Yes, Clear Invoices</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =========================================================================
+         JAVASCRIPT LOGIC
+         ========================================================================= -->
+    <script>
+        const INVOICING_STORAGE_KEY = 'nturn_invoicing_v1';
+        const ACC_STORAGE_KEY = 'nturn_accounting_v1';
+        const MASTER_HUB_KEY = 'nturn_projects_master_v1';
+
+        const DEFAULT_CLIENTS = [
+            { id: 'cl-1', name: 'Apex Media Corp', gstin: '07AAACA1234Q1Z2', phone: '+91 98765 11223', email: 'accounts@apexmedia.com', address: 'Plot 4, Film City, Noida, UP' },
+            { id: 'cl-2', name: 'Starlight Tech Solutions', gstin: '27AABCS5678R1ZX', phone: '+91 99887 76655', email: 'billing@starlight.io', address: 'BKC, Mumbai, Maharashtra' }
+        ];
+
+        const DEFAULT_INVOICES = [
+            {
+                id: 'inv-101',
+                number: 'INV-2026-001',
+                date: '2026-10-24',
+                dueDate: '2026-11-08',
+                clientId: 'cl-1',
+                status: 'Paid',
+                notes: 'Payment received via RTGS.',
+                items: [
+                    { name: 'Full-Stack Web App Development', qty: 1, price: 75000, taxRate: 18 }
+                ],
+                subtotal: 75000,
+                taxTotal: 13500,
+                grandTotal: 88500
+            },
+            {
+                id: 'inv-102',
+                number: 'INV-2026-002',
+                date: '2026-10-29',
+                dueDate: '2026-11-13',
+                clientId: 'cl-2',
+                status: 'Unpaid',
+                notes: 'Bank details: HDFC Bank A/c 502000...',
+                items: [
+                    { name: 'UI/UX Design Sprint', qty: 1, price: 30000, taxRate: 18 },
+                    { name: 'Domain & Hosting Setup', qty: 1, price: 5000, taxRate: 18 }
+                ],
+                subtotal: 35000,
+                taxTotal: 6300,
+                grandTotal: 41300
+            }
+        ];
+
+        let invState = {
+            currency: '₹',
+            activeBusinessId: null,
+            businesses: []
+        };
+
+        let activeTab = 'dashboard';
+        let currentInvFilter = 'all';
+        let editingInvoiceId = null;
+        let editingClientId = null;
+        let currentInvoiceItems = [];
+
+        /* =========================================================================
+           1. INITIALIZATION & DATA MANAGEMENT
+           ========================================================================= */
+        function loadInvoicingState() {
+            try {
+                const raw = localStorage.getItem(INVOICING_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.businesses) invState = parsed;
+                }
+            } catch (e) {
+                console.error('Error loading invoicing data:', e);
+            }
+
+            if (!invState.businesses || invState.businesses.length === 0) {
+                invState.businesses = [{
+                    id: 'b-inv-' + Date.now(),
+                    name: 'Primary Invoicing Profile',
+                    gstin: '07AAAAA0000A1Z5',
+                    address: 'Level 3, Cyber Hub, Gurugram, HR',
+                    bankDetails: 'Bank: HDFC Bank | A/C: 50200098765432 | IFSC: HDFC0000123 | UPI: billing@hdfcbank',
+                    defaultTax: 18,
+                    clients: JSON.parse(JSON.stringify(DEFAULT_CLIENTS)),
+                    invoices: JSON.parse(JSON.stringify(DEFAULT_INVOICES))
+                }];
+            }
+
+            document.getElementById('currencySelect').value = invState.currency || '₹';
+            saveInvoicingState(false);
+        }
+
+        function saveInvoicingState(showToastMsg = false) {
+            try {
+                localStorage.setItem(INVOICING_STORAGE_KEY, JSON.stringify(invState));
+
+                // Sync with Master Hub
+                const masterRaw = localStorage.getItem(MASTER_HUB_KEY);
+                if (masterRaw) {
+                    const master = JSON.parse(masterRaw);
+                    if (!master.appRecords) master.appRecords = {};
+
+                    let allInvs = [];
+                    invState.businesses.forEach(b => {
+                        b.invoices.forEach(inv => {
+                            allInvs.push({
+                                title: `${inv.number} [${b.name}]`,
+                                value: `${invState.currency}${inv.grandTotal} • ${inv.status}`,
+                                date: inv.date
+                            });
+                        });
+                    });
+
+                    master.appRecords['invoicing'] = allInvs;
+                    master.nturnInvoicingFullData = invState;
+                    localStorage.setItem(MASTER_HUB_KEY, JSON.stringify(master));
+                }
+
+                if (showToastMsg) showToast('Saved to LocalStorage');
+            } catch (err) {
+                showToast('Storage limit reached! Please export backup.', 'error');
+            }
+        }
+
+        function getActiveBusiness() {
+            return invState.businesses.find(b => b.id === invState.activeBusinessId) || invState.businesses[0];
+        }
+
+        function getClient(cid) {
+            const b = getActiveBusiness();
+            return b ? b.clients.find(c => c.id === cid) : null;
+        }
+
+        function getClientName(cid) {
+            const c = getClient(cid);
+            return c ? c.name : 'Unknown Client';
+        }
+
+        function formatMoney(num) {
+            const sym = invState.currency || '₹';
+            const clean = Number(num) || 0;
+            return sym + clean.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        }
+
+        function changeCurrency(newSymbol) {
+            invState.currency = newSymbol;
+            saveInvoicingState(false);
+            if (invState.activeBusinessId) renderAllViews();
+            showToast(`Currency set to ${newSymbol}`);
+        }
+
+        /* =========================================================================
+           2. VIEW ROUTING
+           ========================================================================= */
+        function switchView(viewName) {
+            const selView = document.getElementById('businessSelectorView');
+            const actView = document.getElementById('activeBusinessView');
+
+            if (viewName === 'home') {
+                actView.classList.add('hidden');
+                selView.classList.remove('hidden');
+                invState.activeBusinessId = null;
+                saveInvoicingState(false);
+                renderBusinessSelector();
+            } else {
+                selView.classList.add('hidden');
+                actView.classList.remove('hidden');
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           3. BUSINESS SELECTOR
+           ========================================================================= */
+        function renderBusinessSelector() {
+            const container = document.getElementById('businessListContainer');
+            if (invState.businesses.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 col-span-full text-center py-10">No invoicing profiles found. Add one above.</p>`;
+                return;
+            }
+
+            container.innerHTML = invState.businesses.map(b => {
+                let billed = 0, collected = 0;
+                b.invoices.forEach(i => {
+                    const amt = parseFloat(i.grandTotal) || 0;
+                    billed += amt;
+                    if (i.status === 'Paid') collected += amt;
+                });
+
+                return `
+                    <div onclick="openBusiness('${b.id}')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-inv cursor-pointer transition group relative">
+                        <div class="w-12 h-12 rounded-full bg-indigo-50 text-inv flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1 truncate">${escapeHtml(b.name)}</h3>
+                        <p class="text-xs text-slate-500 mb-4">${b.invoices.length} invoices • ${b.clients.length} clients</p>
+                        <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Collected</span>
+                            <span class="font-mono font-bold text-emerald-600">${formatMoney(collected)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openBusiness(bId) {
+            invState.activeBusinessId = bId;
+            saveInvoicingState(false);
+            switchView('active');
+            switchTab('dashboard');
+        }
+
+        function openNewBusinessModal() {
+            document.getElementById('newBusinessNameInput').value = '';
+            document.getElementById('newBusinessModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newBusinessNameInput').focus(), 100);
+        }
+
+        function closeNewBusinessModal() {
+            document.getElementById('newBusinessModal').classList.add('hidden');
+        }
+
+        function saveNewBusiness() {
+            const name = document.getElementById('newBusinessNameInput').value.trim();
+            if (!name) {
+                showToast('Please enter a business name', 'error');
+                return;
+            }
+            
+            const newB = {
+                id: 'b-inv-' + Date.now(),
+                name: name,
+                gstin: '',
+                address: '',
+                bankDetails: '',
+                defaultTax: 18,
+                clients: [],
+                invoices: []
+            };
+            invState.businesses.unshift(newB);
+            closeNewBusinessModal();
+            saveInvoicingState(true);
+            openBusiness(newB.id);
+            showToast(`Created workspace: ${name}`);
+        }
+
+        function openRenameBusinessModal() {
+            const b = getActiveBusiness();
+            if (!b) return;
+            document.getElementById('renameBusinessInput').value = b.name;
+            document.getElementById('renameBusinessModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('renameBusinessInput').select(), 100);
+        }
+
+        function closeRenameBusinessModal() {
+            document.getElementById('renameBusinessModal').classList.add('hidden');
+        }
+
+        function saveRenamedBusiness() {
+            const b = getActiveBusiness();
+            const newName = document.getElementById('renameBusinessInput').value.trim();
+            if (b && newName) {
+                b.name = newName;
+                document.getElementById('activeBusinessNameDisplay').textContent = newName;
+                saveInvoicingState(true);
+                showToast('Workspace renamed');
+            }
+            closeRenameBusinessModal();
+        }
+
+        function deleteCurrentBusiness() {
+            if (confirm("Are you sure you want to delete this business profile and all its bills?")) {
+                invState.businesses = invState.businesses.filter(b => b.id !== invState.activeBusinessId);
+                closeRenameBusinessModal();
+                saveInvoicingState(true);
+                switchView('home');
+                showToast('Profile deleted');
+            }
+        }
+
+        /* =========================================================================
+           4. TAB SWITCHING & RENDER ROUTING
+           ========================================================================= */
+        function switchTab(tabName) {
+            activeTab = tabName;
+            ['dashboard', 'invoices', 'clients', 'settings'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (t === tabName) {
+                    btn.className = 'inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-inv shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                } else {
+                    btn.className = 'inv-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                }
+            });
+            renderAllViews();
+        }
+
+        function renderAllViews() {
+            const b = getActiveBusiness();
+            if (!b) return;
+            
+            document.getElementById('activeBusinessNameDisplay').textContent = b.name;
+            
+            if (activeTab === 'dashboard') renderDashboardTab();
+            if (activeTab === 'invoices') renderInvoicesTable();
+            if (activeTab === 'clients') renderClientsList();
+            if (activeTab === 'settings') renderSettingsTab();
+        }
+
+        function confirmStartFresh() {
+            document.getElementById('startFreshModal').classList.remove('hidden');
+        }
+        
+        function closeStartFreshModal() {
+            document.getElementById('startFreshModal').classList.add('hidden');
+        }
+
+        function executeStartFresh() {
+            const b = getActiveBusiness();
+            if (b) {
+                b.invoices = [];
+                b.clients = [];
+                saveInvoicingState(true);
+                renderAllViews();
+                showToast('All invoices and client records cleared!', 'success');
+            }
+            closeStartFreshModal();
+        }
+
+        /* =========================================================================
+           5. TAB 1: DASHBOARD
+           ========================================================================= */
+        function renderDashboardTab() {
+            const b = getActiveBusiness();
+            let totalBilled = 0, paidTotal = 0, unpaidTotal = 0;
+            let unpaidCount = 0;
+
+            b.invoices.forEach(inv => {
+                const amt = parseFloat(inv.grandTotal) || 0;
+                totalBilled += amt;
+                if (inv.status === 'Paid') {
+                    paidTotal += amt;
+                } else if (inv.status === 'Unpaid') {
+                    unpaidTotal += amt;
+                    unpaidCount++;
+                }
+            });
+
+            document.getElementById('kpiTotalBilled').textContent = formatMoney(totalBilled);
+            document.getElementById('kpiPaidCollections').textContent = formatMoney(paidTotal);
+            document.getElementById('kpiUnpaidDue').textContent = formatMoney(unpaidTotal);
+            document.getElementById('kpiUnpaidCount').textContent = `${unpaidCount} pending invoice(s)`;
+            document.getElementById('kpiTotalClients').textContent = b.clients.length;
+
+            renderRecentInvoicesTable();
+        }
+
+        function renderRecentInvoicesTable() {
+            const tbody = document.getElementById('recentInvoicesTbody');
+            const b = getActiveBusiness();
+            const recent = [...b.invoices].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+            if (recent.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">No invoices issued yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = recent.map(inv => {
+                const statusColor = inv.status === 'Paid' ? 'emerald' : inv.status === 'Unpaid' ? 'amber' : 'slate';
+                return `
+                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="viewPrintInvoice('${inv.id}')">
+                        <td class="px-5 py-3 font-mono font-bold text-slate-900">${escapeHtml(inv.number)}</td>
+                        <td class="px-5 py-3 text-slate-500 text-xs">${escapeHtml(inv.date)}</td>
+                        <td class="px-5 py-3 font-semibold text-slate-800">${escapeHtml(getClientName(inv.clientId))}</td>
+                        <td class="px-5 py-3 text-slate-500 text-xs">${escapeHtml(inv.dueDate || 'Immediate')}</td>
+                        <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-${statusColor}-100 text-${statusColor}-800">${inv.status}</span></td>
+                        <td class="px-5 py-3 text-right font-mono font-bold text-slate-900">${formatMoney(inv.grandTotal)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================================
+           6. TAB 2: INVOICES LEDGER
+           ========================================================================= */
+        function setInvoiceFilter(filterType) {
+            currentInvFilter = filterType;
+            document.querySelectorAll('.inv-flt-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'shadow-2xs', 'text-slate-900');
+            });
+            const activeBtn = document.getElementById(`flt-inv-${filterType}`);
+            if (activeBtn) activeBtn.classList.add('bg-white', 'shadow-2xs');
+            renderInvoicesTable();
+        }
+
+        function renderInvoicesTable() {
+            const tbody = document.getElementById('fullInvoicesTbody');
+            const query = (document.getElementById('invoiceSearchInput')?.value || '').trim().toLowerCase();
+            const b = getActiveBusiness();
+
+            const filtered = b.invoices.filter(inv => {
+                if (currentInvFilter !== 'all' && inv.status !== currentInvFilter) return false;
+                const cName = getClientName(inv.clientId).toLowerCase();
+                const invNum = inv.number.toLowerCase();
+                if (query && !cName.includes(query) && !invNum.includes(query)) return false;
+                return true;
+            }).sort((a, b) => b.date.localeCompare(a.date));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400">No matching invoices found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(inv => {
+                const statusColor = inv.status === 'Paid' ? 'emerald' : inv.status === 'Unpaid' ? 'amber' : 'slate';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">${escapeHtml(inv.number)}</td>
+                        <td class="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">${escapeHtml(inv.date)}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-800">${escapeHtml(getClientName(inv.clientId))}</td>
+                        <td class="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">${escapeHtml(inv.dueDate || 'Immediate')}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <button onclick="toggleInvoicePaidStatus('${inv.id}')" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-${statusColor}-100 text-${statusColor}-800 hover:opacity-80 transition">
+                                ${inv.status === 'Paid' ? '✅ Paid' : '⏳ Unpaid'}
+                            </button>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-slate-600 whitespace-nowrap">${formatMoney(inv.taxTotal)}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">${formatMoney(inv.grandTotal)}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <button onclick="editInvoice('${inv.id}')" class="p-1.5 text-slate-400 hover:text-inv transition" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="viewPrintInvoice('${inv.id}')" class="p-1.5 text-slate-400 hover:text-slate-800 transition" title="Print/View"><i class="fa-solid fa-print text-xs"></i></button>
+                            <button onclick="deleteInvoice('${inv.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 transition" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleInvoicePaidStatus(invId) {
+            const b = getActiveBusiness();
+            const inv = b.invoices.find(i => i.id === invId);
+            if (!inv) return;
+
+            inv.status = inv.status === 'Paid' ? 'Unpaid' : 'Paid';
+            saveInvoicingState(true);
+
+            // Auto-sync to NTURN Accounting when marked Paid
+            if (inv.status === 'Paid') {
+                syncToAccountingFromInvoice(inv);
+            }
+
+            renderAllViews();
+        }
+
+        function deleteInvoice(invId) {
+            if (confirm('Delete this invoice permanently?')) {
+                const b = getActiveBusiness();
+                b.invoices = b.invoices.filter(i => i.id !== invId);
+                saveInvoicingState(true);
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           7. TAB 3: CLIENTS DIRECTORY
+           ========================================================================= */
+        function renderClientsList() {
+            const container = document.getElementById('clientsGridContainer');
+            const query = (document.getElementById('clientSearchInput')?.value || '').trim().toLowerCase();
+            const b = getActiveBusiness();
+
+            const filtered = b.clients.filter(c => {
+                if (!query) return true;
+                return c.name.toLowerCase().includes(query) || (c.gstin || '').toLowerCase().includes(query) || (c.phone || '').includes(query);
+            });
+
+            document.getElementById('clientCountBadge').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400">No clients registered.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(c => {
+                let totalBilled = 0, invCount = 0;
+                b.invoices.forEach(i => {
+                    if (i.clientId === c.id) {
+                        totalBilled += (parseFloat(i.grandTotal) || 0);
+                        invCount++;
+                    }
+                });
+
+                return `
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs relative group">
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-inv flex items-center justify-center font-bold text-sm uppercase shrink-0">
+                                    ${c.name.charAt(0)}
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-slate-900 text-sm leading-tight truncate">${escapeHtml(c.name)}</h4>
+                                    <p class="text-[10px] font-mono text-slate-400 truncate">${escapeHtml(c.gstin || 'No GSTIN')}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5 mb-4 text-xs text-slate-600">
+                            <div class="flex items-center gap-2 truncate"><i class="fa-solid fa-phone text-slate-400 w-3"></i> ${escapeHtml(c.phone || 'No phone')}</div>
+                            <div class="flex items-center gap-2 truncate"><i class="fa-solid fa-envelope text-slate-400 w-3"></i> ${escapeHtml(c.email || 'No email')}</div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="text-slate-400">${invCount} bills (${formatMoney(totalBilled)})</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="editClient('${c.id}')" class="p-1 text-slate-400 hover:text-inv" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="deleteClient('${c.id}')" class="p-1 text-slate-400 hover:text-rose-600" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openClientModal() {
+            editingClientId = null;
+            document.getElementById('clientModalTitle').textContent = 'Add Client Account';
+            document.getElementById('clientNameInput').value = '';
+            document.getElementById('clientGstinInput').value = '';
+            document.getElementById('clientPhoneInput').value = '';
+            document.getElementById('clientEmailInput').value = '';
+            document.getElementById('clientAddressInput').value = '';
+            document.getElementById('clientModal').classList.remove('hidden');
+        }
+
+        function editClient(cid) {
+            const b = getActiveBusiness();
+            const c = b.clients.find(x => x.id === cid);
+            if (!c) return;
+
+            editingClientId = cid;
+            document.getElementById('clientModalTitle').textContent = 'Edit Client Account';
+            document.getElementById('clientNameInput').value = c.name;
+            document.getElementById('clientGstinInput').value = c.gstin || '';
+            document.getElementById('clientPhoneInput').value = c.phone || '';
+            document.getElementById('clientEmailInput').value = c.email || '';
+            document.getElementById('clientAddressInput').value = c.address || '';
+            document.getElementById('clientModal').classList.remove('hidden');
+        }
+
+        function closeClientModal() {
+            document.getElementById('clientModal').classList.add('hidden');
+        }
+
+        function saveClient() {
+            const name = document.getElementById('clientNameInput').value.trim();
+            const gstin = document.getElementById('clientGstinInput').value.trim();
+            const phone = document.getElementById('clientPhoneInput').value.trim();
+            const email = document.getElementById('clientEmailInput').value.trim();
+            const address = document.getElementById('clientAddressInput').value.trim();
+
+            if (!name) {
+                showToast('Client name is required', 'error');
+                return;
+            }
+
+            const b = getActiveBusiness();
+            if (editingClientId) {
+                const c = b.clients.find(x => x.id === editingClientId);
+                if (c) {
+                    c.name = name; c.gstin = gstin; c.phone = phone; c.email = email; c.address = address;
+                }
+            } else {
+                b.clients.unshift({
+                    id: 'cl-' + Date.now(),
+                    name, gstin, phone, email, address
+                });
+            }
+
+            saveInvoicingState(true);
+            closeClientModal();
+            renderAllViews();
+        }
+
+        function deleteClient(cid) {
+            if (confirm("Delete client and related invoice assignments?")) {
+                const b = getActiveBusiness();
+                b.clients = b.clients.filter(c => c.id !== cid);
+                saveInvoicingState(true);
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           8. TAB 4: SETTINGS / BILLING PROFILE
+           ========================================================================= */
+        function renderSettingsTab() {
+            const b = getActiveBusiness();
+            document.getElementById('cfgCompanyName').value = b.name || '';
+            document.getElementById('cfgGstin').value = b.gstin || '';
+            document.getElementById('cfgDefaultTax').value = b.defaultTax || 18;
+            document.getElementById('cfgAddress').value = b.address || '';
+            document.getElementById('cfgBankDetails').value = b.bankDetails || '';
+        }
+
+        function saveBillingProfile() {
+            const b = getActiveBusiness();
+            b.name = document.getElementById('cfgCompanyName').value.trim() || b.name;
+            b.gstin = document.getElementById('cfgGstin').value.trim();
+            b.defaultTax = parseInt(document.getElementById('cfgDefaultTax').value) || 18;
+            b.address = document.getElementById('cfgAddress').value.trim();
+            b.bankDetails = document.getElementById('cfgBankDetails').value.trim();
+
+            saveInvoicingState(true);
+            renderAllViews();
+            showToast('Billing profile saved successfully!');
+        }
+
+        /* =========================================================================
+           9. INVOICE CREATION & CALCULATION
+           ========================================================================= */
+        function openInvoiceModal() {
+            const b = getActiveBusiness();
+            if (b.clients.length === 0) {
+                showToast('Please add at least one client before generating an invoice', 'error');
+                switchTab('clients');
+                return;
+            }
+
+            editingInvoiceId = null;
+            document.getElementById('invoiceModalTitle').textContent = 'Generate Tax Invoice';
+
+            const nextNum = 'INV-2026-' + String(b.invoices.length + 1).padStart(3, '0');
+            document.getElementById('invNumberInput').value = nextNum;
+
+            const clientSelect = document.getElementById('invClientSelect');
+            clientSelect.innerHTML = b.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+
+            document.getElementById('invDateInput').value = new Date().toISOString().slice(0, 10);
+            
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 15);
+            document.getElementById('invDueDateInput').value = dueDate.toISOString().slice(0, 10);
+
+            document.getElementById('invStatusSelect').value = 'Unpaid';
+            document.getElementById('invNotesInput').value = b.bankDetails || '';
+
+            currentInvoiceItems = [{ name: '', qty: 1, price: 0, taxRate: b.defaultTax || 18 }];
+            renderInvoiceItemsRows();
+
+            document.getElementById('invoiceModal').classList.remove('hidden');
+        }
+
+        function editInvoice(invId) {
+            const b = getActiveBusiness();
+            const inv = b.invoices.find(i => i.id === invId);
+            if (!inv) return;
+
+            editingInvoiceId = invId;
+            document.getElementById('invoiceModalTitle').textContent = `Edit Invoice ${inv.number}`;
+            document.getElementById('invNumberInput').value = inv.number;
+
+            const clientSelect = document.getElementById('invClientSelect');
+            clientSelect.innerHTML = b.clients.map(c => `<option value="${c.id}" ${c.id === inv.clientId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+
+            document.getElementById('invDateInput').value = inv.date;
+            document.getElementById('invDueDateInput').value = inv.dueDate || '';
+            document.getElementById('invStatusSelect').value = inv.status;
+            document.getElementById('invNotesInput').value = inv.notes || '';
+
+            currentInvoiceItems = JSON.parse(JSON.stringify(inv.items || []));
+            if (currentInvoiceItems.length === 0) currentInvoiceItems = [{ name: '', qty: 1, price: 0, taxRate: 18 }];
+            
+            renderInvoiceItemsRows();
+            document.getElementById('invoiceModal').classList.remove('hidden');
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceModal').classList.add('hidden');
+        }
+
+        function renderInvoiceItemsRows() {
+            const tbody = document.getElementById('invoiceItemsTbody');
+            tbody.innerHTML = currentInvoiceItems.map((item, idx) => {
+                const sub = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                const tax = (sub * (parseFloat(item.taxRate) || 0)) / 100;
+                const total = sub + tax;
+
+                return `
+                    <tr>
+                        <td class="p-2"><input type="text" value="${escapeHtml(item.name)}" onchange="updateInvoiceItem(${idx}, 'name', this.value)" placeholder="Description of service/goods" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-inv"></td>
+                        <td class="p-2"><input type="number" value="${item.qty}" min="1" oninput="updateInvoiceItem(${idx}, 'qty', this.value)" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-inv text-center"></td>
+                        <td class="p-2"><input type="number" value="${item.price}" min="0" step="any" oninput="updateInvoiceItem(${idx}, 'price', this.value)" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-inv text-right font-mono"></td>
+                        <td class="p-2">
+                            <select onchange="updateInvoiceItem(${idx}, 'taxRate', this.value)" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-inv">
+                                <option value="0" ${item.taxRate == 0 ? 'selected' : ''}>0%</option>
+                                <option value="5" ${item.taxRate == 5 ? 'selected' : ''}>5%</option>
+                                <option value="12" ${item.taxRate == 12 ? 'selected' : ''}>12%</option>
+                                <option value="18" ${item.taxRate == 18 ? 'selected' : ''}>18%</option>
+                                <option value="28" ${item.taxRate == 28 ? 'selected' : ''}>28%</option>
+                            </select>
+                        </td>
+                        <td class="p-2 text-right font-mono font-bold text-slate-800">${formatMoney(total)}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="removeInvoiceItemRow(${idx})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-xmark"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            calculateInvoiceGrandTotals();
+        }
+
+        function addInvoiceItemRow() {
+            const b = getActiveBusiness();
+            currentInvoiceItems.push({ name: '', qty: 1, price: 0, taxRate: b.defaultTax || 18 });
+            renderInvoiceItemsRows();
+        }
+
+        function removeInvoiceItemRow(idx) {
+            if (currentInvoiceItems.length <= 1) {
+                showToast('Invoice must have at least one line item', 'error');
+                return;
+            }
+            currentInvoiceItems.splice(idx, 1);
+            renderInvoiceItemsRows();
+        }
+
+        function updateInvoiceItem(idx, field, val) {
+            if (currentInvoiceItems[idx]) {
+                currentInvoiceItems[idx][field] = val;
+                if (['qty', 'price', 'taxRate'].includes(field)) {
+                    renderInvoiceItemsRows();
+                }
+            }
+        }
+
+        function calculateInvoiceGrandTotals() {
+            let subtotal = 0;
+            let taxTotal = 0;
+
+            currentInvoiceItems.forEach(i => {
+                const q = parseFloat(i.qty) || 0;
+                const p = parseFloat(i.price) || 0;
+                const t = parseFloat(i.taxRate) || 0;
+                const lineSub = q * p;
+                const lineTax = (lineSub * t) / 100;
+
+                subtotal += lineSub;
+                taxTotal += lineTax;
+            });
+
+            const grand = subtotal + taxTotal;
+
+            document.getElementById('calcSubtotal').textContent = formatMoney(subtotal);
+            document.getElementById('calcTax').textContent = formatMoney(taxTotal);
+            document.getElementById('calcGrandTotal').textContent = formatMoney(grand);
+
+            return { subtotal, taxTotal, grandTotal: grand };
+        }
+
+        function saveInvoice() {
+            const b = getActiveBusiness();
+            const number = document.getElementById('invNumberInput').value.trim();
+            const clientId = document.getElementById('invClientSelect').value;
+            const date = document.getElementById('invDateInput').value;
+            const dueDate = document.getElementById('invDueDateInput').value;
+            const status = document.getElementById('invStatusSelect').value;
+            const notes = document.getElementById('invNotesInput').value.trim();
+            const { subtotal, taxTotal, grandTotal } = calculateInvoiceGrandTotals();
+
+            if (!number || !clientId || !date) {
+                showToast('Invoice #, Client, and Date are mandatory', 'error');
+                return;
+            }
+
+            const cleanItems = currentInvoiceItems.filter(i => i.name.trim() !== '');
+            if (cleanItems.length === 0) {
+                showToast('Please add at least one line item with a description', 'error');
+                return;
+            }
+
+            let savedInv = null;
+
+            if (editingInvoiceId) {
+                const inv = b.invoices.find(i => i.id === editingInvoiceId);
+                if (inv) {
+                    inv.number = number; inv.clientId = clientId; inv.date = date; inv.dueDate = dueDate;
+                    inv.status = status; inv.notes = notes; inv.items = cleanItems;
+                    inv.subtotal = subtotal; inv.taxTotal = taxTotal; inv.grandTotal = grandTotal;
+                    savedInv = inv;
+                }
+            } else {
+                savedInv = {
+                    id: 'inv-' + Date.now(),
+                    number, clientId, date, dueDate, status, notes,
+                    items: cleanItems, subtotal, taxTotal, grandTotal
+                };
+                b.invoices.unshift(savedInv);
+            }
+
+            saveInvoicingState(true);
+            closeInvoiceModal();
+            renderAllViews();
+
+            if (savedInv && savedInv.status === 'Paid') {
+                syncToAccountingFromInvoice(savedInv);
+            }
+        }
+
+        /* =========================================================================
+           10. CROSS-MODULE SYNC: INVOICE PAID -> ACCOUNTING MONEY IN
+           ========================================================================= */
+        function syncToAccountingFromInvoice(invoice) {
+            try {
+                let accRaw = localStorage.getItem(ACC_STORAGE_KEY);
+                if (!accRaw) return;
+
+                let accData = JSON.parse(accRaw);
+                if (!accData.businesses) return;
+
+                const bName = getActiveBusiness().name;
+                let accBiz = accData.businesses.find(b => b.name.toLowerCase() === bName.toLowerCase()) || accData.businesses[0];
+
+                if (accBiz) {
+                    const existingTxIdx = accBiz.transactions.findIndex(t => t.id === 'tx-inv-' + invoice.id);
+                    const txEntry = {
+                        id: 'tx-inv-' + invoice.id,
+                        type: 'income',
+                        amount: invoice.grandTotal,
+                        date: invoice.date,
+                        desc: `Client Invoice #${invoice.number} (${getClientName(invoice.clientId)})`,
+                        category: 'Product Sales',
+                        status: 'Paid',
+                        method: 'Bank Transfer'
+                    };
+
+                    if (existingTxIdx > -1) {
+                        accBiz.transactions[existingTxIdx] = txEntry;
+                    } else {
+                        accBiz.transactions.unshift(txEntry);
+                    }
+
+                    localStorage.setItem(ACC_STORAGE_KEY, JSON.stringify(accData));
+                    showToast('Synced directly to NTURN Accounting ledger!', 'success');
+                }
+            } catch (e) {
+                console.error('Accounting auto-sync failed:', e);
+            }
+        }
+
+        /* =========================================================================
+           11. VIEW & PRINT INVOICE GENERATOR
+           ========================================================================= */
+        function viewPrintInvoice(invId) {
+            const b = getActiveBusiness();
+            const inv = b.invoices.find(i => i.id === invId);
+            const client = b.clients.find(c => c.id === inv.clientId);
+            if (!inv || !client) return;
+
+            const printCard = document.getElementById('invoicePrintableCard');
+
+            const itemsRows = inv.items.map((item, idx) => {
+                const sub = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                const tax = (sub * (parseFloat(item.taxRate) || 0)) / 100;
+                const total = sub + tax;
+
+                return `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 10px 8px; font-weight: 500;">${escapeHtml(item.name)}</td>
+                        <td style="padding: 10px 8px; text-align: center;">${item.qty}</td>
+                        <td style="padding: 10px 8px; text-align: right; font-family: monospace;">${formatMoney(item.price)}</td>
+                        <td style="padding: 10px 8px; text-align: center;">${item.taxRate}%</td>
+                        <td style="padding: 10px 8px; text-align: right; font-weight: bold; font-family: monospace;">${formatMoney(total)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            printCard.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 30px; border-bottom: 3px solid #4f46e5; padding-bottom: 18px;">
+                    <div>
+                        <h1 style="font-size: 24px; font-weight: 800; color: #4f46e5; margin: 0;">${escapeHtml(b.name)}</h1>
+                        <p style="color: #64748b; font-size: 11px; margin-top: 4px; max-width: 280px;">${escapeHtml(b.address || 'Business Headquarters')}</p>
+                        ${b.gstin ? `<p style="color: #0f172a; font-size: 11px; font-weight: 600; margin-top: 2px;">GSTIN: ${escapeHtml(b.gstin)}</p>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                        <h2 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: 0.5px;">TAX INVOICE</h2>
+                        <p style="font-size: 15px; font-weight: 700; color: #4f46e5; font-family: monospace; margin: 3px 0;">${escapeHtml(inv.number)}</p>
+                        <p style="font-size: 11px; color: #64748b; margin: 0;">Date: ${inv.date} | Due: ${inv.dueDate || 'Immediate'}</p>
+                        <span style="display:inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: bold; background: ${inv.status === 'Paid' ? '#ecfdf5' : '#fffbeb'}; color: ${inv.status === 'Paid' ? '#047857' : '#b45309'}; border: 1px solid ${inv.status === 'Paid' ? '#a7f3d0' : '#fde68a'};">
+                            STATUS: ${inv.status.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 12px;">
+                    <div>
+                        <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">BILLED TO:</p>
+                        <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${escapeHtml(client.name)}</p>
+                        <p style="color: #475569; margin: 2px 0;">${escapeHtml(client.address || '')}</p>
+                        <p style="color: #475569; margin: 2px 0;">${escapeHtml(client.phone || '')} • ${escapeHtml(client.email || '')}</p>
+                        ${client.gstin ? `<p style="font-weight: 600; color: #0f172a; margin-top: 4px;">Client GSTIN: ${escapeHtml(client.gstin)}</p>` : ''}
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 12px;">
+                    <thead style="background: #f8fafc; border-bottom: 2px solid #cbd5e1; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                        <tr>
+                            <th style="padding: 10px 8px; text-align: left;">Item Description</th>
+                            <th style="padding: 10px 8px; text-align: center; width: 60px;">Qty</th>
+                            <th style="padding: 10px 8px; text-align: right; width: 100px;">Unit Rate</th>
+                            <th style="padding: 10px 8px; text-align: center; width: 70px;">Tax %</th>
+                            <th style="padding: 10px 8px; text-align: right; width: 110px;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                    </tbody>
+                </table>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; font-size: 12px;">
+                    <div style="max-width: 340px;">
+                        <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">PAYMENT DETAILS / TERMS:</p>
+                        <p style="color: #334155; font-size: 11px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: monospace;">
+                            ${escapeHtml(inv.notes || b.bankDetails || 'Thank you for your business!')}
+                        </p>
+                    </div>
+
+                    <div style="width: 250px;">
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #475569;">
+                            <span>Subtotal:</span>
+                            <span style="font-family: monospace; font-weight: 600;">${formatMoney(inv.subtotal)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #475569;">
+                            <span>Total GST:</span>
+                            <span style="font-family: monospace; font-weight: 600;">${formatMoney(inv.taxTotal)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #cbd5e1; margin-top: 6px; font-size: 15px; font-weight: 800; color: #0f172a;">
+                            <span>Grand Total:</span>
+                            <span style="color: #4f46e5; font-family: monospace;">${formatMoney(inv.grandTotal)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; padding-top: 15px; border-top: 1px dashed #cbd5e1; font-size: 10px; color: #94a3b8;">
+                    This is a computer-generated tax invoice verified by NTURN Invoicing Engine.
+                </div>
+            `;
+
+            window.print();
+        }
+
+        /* =========================================================================
+           12. UTILS & MODAL ESCAPE
+           ========================================================================= */
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold text-white flex items-center gap-2 transition ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check text-indigo-400'}"></i><span>${escapeHtml(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeInvoiceModal();
+                closeClientModal();
+                closeNewBusinessModal();
+                closeRenameBusinessModal();
+                closeStartFreshModal();
+            }
+        });
+
+        window.onload = function() {
+            loadInvoicingState();
+            if (invState.activeBusinessId) {
+                switchView('active');
+                switchTab('dashboard');
+            } else {
+                switchView('home');
+            }
+        };
+    </script>
+</body>
+</html>

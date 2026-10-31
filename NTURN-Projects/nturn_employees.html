@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTURN Employees — Staff Directory, Attendance & Payroll</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        plum: {
+                            DEFAULT: '#714B67',
+                            hover: '#5d3d54',
+                            light: '#f5eff4'
+                        },
+                        emp: {
+                            DEFAULT: '#0284c7', /* Sky Blue 600 */
+                            hover: '#0369a1',   /* Sky Blue 700 */
+                            light: '#e0f2fe'    /* Sky Blue 100 */
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @media print {
+            header, nav, .no-print {
+                display: none !important;
+            }
+            body {
+                background: #ffffff !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- =========================================================================
+         VIEW 1: BUSINESS SELECTOR / HOME DASHBOARD
+         ========================================================================= -->
+    <div id="businessSelectorView" class="min-h-screen flex flex-col bg-slate-50">
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-plum hover:bg-plum-hover shadow-2xs transition" title="Return to NTURN Projects Hub">
+                    <span class="text-amber-300 text-xs">➕</span>
+                    <span>NTURN Projects</span>
+                </a>
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-sky-100 text-emp flex items-center justify-center font-bold text-sm shadow-2xs">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <span class="font-bold text-base sm:text-lg text-slate-800 tracking-tight">HR &amp; Team Hubs</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openNewBusinessModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">Add Organization</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-10">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">Employee &amp; Staff Workspaces</h1>
+                <p class="text-slate-500 text-sm">Select an active organization profile to track attendance, staff profiles, leaves, and payroll.</p>
+            </div>
+
+            <div id="businessListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <!-- Organization Cards populated via JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         VIEW 2: ACTIVE BUSINESS EMPLOYEE WORKSPACE
+         ========================================================================= -->
+    <div id="activeBusinessView" class="hidden min-h-screen flex flex-col bg-slate-50">
+        
+        <!-- TOP NAVIGATION HEADER -->
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-2xs">
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button onclick="switchView('home')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition" title="Back to All Organizations">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span class="hidden sm:inline">Organizations</span>
+                </button>
+
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+
+                <div class="flex items-center gap-2 max-w-[150px] sm:max-w-xs cursor-pointer" onclick="openRenameBusinessModal()">
+                    <div class="w-8 h-8 rounded-lg bg-emp text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                        <i class="fa-solid fa-id-badge"></i>
+                    </div>
+                    <span id="activeBusinessNameDisplay" class="font-bold text-base sm:text-lg text-slate-800 tracking-tight truncate hover:text-emp transition" title="Click to rename organization">Organization Name</span>
+                </div>
+            </div>
+
+            <!-- 4 Main Tabs: Overview, Staff Directory, Attendance & Leaves, Departments -->
+            <nav class="flex items-center bg-slate-100 p-1 rounded-xl w-full sm:w-auto order-3 lg:order-2 justify-center overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-emp shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-pie"></i> <span>Overview</span>
+                </button>
+                <button onclick="switchTab('staff')" id="tabBtn-staff" class="emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-user-group"></i> <span>Staff Directory</span>
+                </button>
+                <button onclick="switchTab('attendance')" id="tabBtn-attendance" class="emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-calendar-check"></i> <span>Attendance &amp; Leaves</span>
+                </button>
+                <button onclick="switchTab('departments')" id="tabBtn-departments" class="emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-sitemap"></i> <span>Departments</span>
+                </button>
+            </nav>
+
+            <div class="flex items-center gap-2 order-2 lg:order-3">
+                <select id="currencySelect" onchange="changeCurrency(this.value)" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/70 text-xs font-bold text-slate-700 border border-slate-200 focus:outline-none cursor-pointer">
+                    <option value="₹">₹ INR</option>
+                    <option value="$">$ USD</option>
+                    <option value="€">€ EUR</option>
+                    <option value="£">£ GBP</option>
+                </select>
+
+                <button onclick="openEmployeeModal()" class="px-3 sm:px-4 py-1.5 rounded-lg bg-emp hover:bg-emp-hover text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">Add Employee</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6">
+
+            <!-- =====================================================================
+                 TAB 1: HR OVERVIEW
+                 ===================================================================== -->
+            <section id="view-dashboard" class="space-y-6">
+
+                <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-bold text-slate-900">Workforce &amp; HR Dashboard</h1>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="fa-solid fa-check mr-1 text-[9px]"></i>Saved Locally
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage staff records, daily roll calls, leave approvals, and monthly salary budgets.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                        <button onclick="openEmployeeModal()" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-user-plus text-emp"></i>
+                            <span>+ Onboard Staff</span>
+                        </button>
+                        
+                        <button onclick="confirmStartFresh()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 border border-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition" title="Clear all employee data for this workspace">
+                            <i class="fa-solid fa-rotate-left"></i> Start Fresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Employees</span>
+                            <div class="w-8 h-8 rounded-xl bg-sky-50 text-emp flex items-center justify-center">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalStaff" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0</div>
+                        <p id="kpiActiveSummary" class="text-[11px] text-slate-500 mt-1.5">0 active staff members</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Monthly Payroll</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i class="fa-solid fa-money-check-dollar"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalPayroll" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">₹0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Combined monthly salaries</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">On Leave Today</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <i class="fa-solid fa-calendar-xmark"></i>
+                            </div>
+                        </div>
+                        <div id="kpiOnLeaveCount" class="text-2xl sm:text-3xl font-extrabold text-amber-600 font-mono">0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Approved absent requests</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Departments</span>
+                            <div class="w-8 h-8 rounded-xl bg-purple-50 text-plum flex items-center justify-center">
+                                <i class="fa-solid fa-sitemap"></i>
+                            </div>
+                        </div>
+                        <div id="kpiDepartmentCount" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Active business teams</p>
+                    </div>
+                </div>
+
+                <!-- Breakdown Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base text-slate-800">Department Headcount</h3>
+                                <p class="text-xs text-slate-400">Staff distribution by functional division</p>
+                            </div>
+                            <button onclick="switchTab('departments')" class="text-xs font-semibold text-emp hover:underline">Manage →</button>
+                        </div>
+                        <div id="departmentHeadcountContainer" class="space-y-3.5 my-auto">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col">
+                        <div class="mb-4">
+                            <h3 class="font-bold text-sm sm:text-base text-slate-800">Employment Status Ratio</h3>
+                            <p class="text-xs text-slate-400">Active vs on leave vs probationary</p>
+                        </div>
+                        <div id="statusRatioContainer" class="flex-1 space-y-3.5 my-auto">
+                            <!-- Rendered via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Joinees Table -->
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-sm sm:text-base text-slate-800">Recently Onboarded Staff</h3>
+                        <button onclick="switchTab('staff')" class="text-xs font-semibold text-emp hover:underline">
+                            View All Staff →
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-5 py-3">Employee</th>
+                                    <th class="px-5 py-3">Department &amp; Role</th>
+                                    <th class="px-5 py-3">Join Date</th>
+                                    <th class="px-5 py-3">Status</th>
+                                    <th class="px-5 py-3 text-right">Monthly Compensation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentStaffTbody" class="divide-y divide-slate-100">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 2: STAFF DIRECTORY
+                 ===================================================================== -->
+            <section id="view-staff" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
+                        <button onclick="setStaffFilter('all')" id="flt-stf-all" class="stf-flt-btn px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition whitespace-nowrap">All Staff</button>
+                        <button onclick="setStaffFilter('Active')" id="flt-stf-Active" class="stf-flt-btn px-3 py-1.5 rounded-lg text-emerald-700 hover:bg-white/60 transition whitespace-nowrap">✅ Active</button>
+                        <button onclick="setStaffFilter('On Leave')" id="flt-stf-OnLeave" class="stf-flt-btn px-3 py-1.5 rounded-lg text-amber-700 hover:bg-white/60 transition whitespace-nowrap">🌴 On Leave</button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 sm:w-60">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="staffSearchInput" oninput="renderStaffDirectory()" placeholder="Search name, role, email..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:bg-white focus:border-emp">
+                        </div>
+                        <select id="staffDeptFilter" onchange="renderStaffDirectory()" class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-emp">
+                            <option value="all">All Departments</option>
+                        </select>
+                        <button onclick="openEmployeeModal()" class="px-3.5 py-1.5 rounded-xl bg-emp hover:bg-emp-hover text-white text-xs font-semibold transition whitespace-nowrap">+ Add Employee</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="staffCardsContainer">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 3: ATTENDANCE & LEAVES
+                 ===================================================================== -->
+            <section id="view-attendance" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Roll Call &amp; Leave Requests</h2>
+                        <p class="text-xs text-slate-400">Log employee daily attendance checks or record formal leave approvals.</p>
+                    </div>
+                    <button onclick="openLeaveModal()" class="px-3.5 py-1.5 rounded-xl bg-emp hover:bg-emp-hover text-white text-xs font-semibold transition">
+                        + Apply / Log Leave
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="px-5 py-3">Employee</th>
+                                    <th class="px-5 py-3">Leave Type</th>
+                                    <th class="px-5 py-3">Date Range</th>
+                                    <th class="px-5 py-3">Reason</th>
+                                    <th class="px-5 py-3">Status</th>
+                                    <th class="px-5 py-3 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leavesTableBody" class="divide-y divide-slate-100">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 4: DEPARTMENTS
+                 ===================================================================== -->
+            <section id="view-departments" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-bold text-slate-800">Organizational Departments</h2>
+                        <span id="departmentCountBadge" class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-md">0</span>
+                    </div>
+
+                    <button onclick="openDepartmentModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition whitespace-nowrap">
+                        + Add Department
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="departmentsGridContainer">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         MODALS
+         ========================================================================= -->
+
+    <!-- New Business Workspace Modal -->
+    <div id="newBusinessModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeNewBusinessModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Add Organization Workspace</h3>
+                <button onclick="closeNewBusinessModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Company / Organization Name</label>
+                    <input type="text" id="newBusinessNameInput" placeholder="e.g. Apex Technologies Inc." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-emp font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeNewBusinessModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveNewBusiness()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Workspace Modal -->
+    <div id="renameBusinessModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeRenameBusinessModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Rename Organization</h3>
+                <button onclick="closeRenameBusinessModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <input type="text" id="renameBusinessInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-emp font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-2">
+                <button onclick="deleteCurrentBusiness()" class="text-xs font-semibold text-rose-600 hover:text-rose-700"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                <div class="flex gap-2">
+                    <button onclick="closeRenameBusinessModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                    <button onclick="saveRenamedBusiness()" class="px-4 py-2 rounded-xl bg-emp hover:bg-emp-hover text-white text-xs font-semibold shadow-sm transition">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Add/Edit Modal -->
+    <div id="employeeModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto" onclick="closeEmployeeModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-auto" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 bg-emp text-white flex items-center justify-between">
+                <h3 id="employeeModalTitle" class="font-bold text-base">Onboard New Staff Member</h3>
+                <button onclick="closeEmployeeModal()" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Full Name *</label>
+                        <input type="text" id="empNameInput" placeholder="Aarav Sharma" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Employee ID</label>
+                        <input type="text" id="empCodeInput" placeholder="EMP-1001" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Department *</label>
+                        <select id="empDeptSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Designation / Role *</label>
+                        <input type="text" id="empRoleInput" placeholder="e.g. Lead Frontend Engineer" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Email Address *</label>
+                        <input type="email" id="empEmailInput" placeholder="aarav@company.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Phone Number</label>
+                        <input type="text" id="empPhoneInput" placeholder="+91..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Joining Date</label>
+                        <input type="date" id="empDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+                        <select id="empStatusSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-emp focus:bg-white">
+                            <option value="Active">Active</option>
+                            <option value="On Leave">On Leave</option>
+                            <option value="Probation">Probation</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Monthly Salary (<span class="currency-label">₹</span>)</label>
+                        <input type="number" id="empSalaryInput" placeholder="65000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-mono font-bold focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button onclick="closeEmployeeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveEmployee()" class="px-5 py-2 rounded-xl bg-emp hover:bg-emp-hover text-white text-xs font-semibold shadow-sm transition">Save Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply Leave Modal -->
+    <div id="leaveModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onclick="closeLeaveModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Log Leave Request</h3>
+                <button onclick="closeLeaveModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs sm:text-sm">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Employee *</label>
+                    <select id="leaveEmpSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Leave Type</label>
+                        <select id="leaveTypeSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                            <option value="Paid Time Off (PTO)">Paid Time Off (PTO)</option>
+                            <option value="Sick Leave">Sick Leave</option>
+                            <option value="Casual Leave">Casual Leave</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+                        <select id="leaveStatusSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                            <option value="Approved">Approved</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">From Date</label>
+                        <input type="date" id="leaveFromInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">To Date</label>
+                        <input type="date" id="leaveToInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reason / Notes</label>
+                    <input type="text" id="leaveReasonInput" placeholder="e.g. Medical recovery or family event" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeLeaveModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveLeave()" class="px-4 py-2 rounded-xl bg-emp hover:bg-emp-hover text-white text-xs font-semibold shadow-sm transition">Save Leave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Modal -->
+    <div id="departmentModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onclick="closeDepartmentModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 id="deptModalTitle" class="font-bold text-slate-800">Add Department</h3>
+                <button onclick="closeDepartmentModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs sm:text-sm">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Department Name *</label>
+                    <input type="text" id="deptNameInput" placeholder="e.g. Product Engineering" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:border-emp focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Lead / Manager</label>
+                    <input type="text" id="deptLeadInput" placeholder="e.g. Priya Nair" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emp focus:bg-white">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeDepartmentModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveDepartment()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">Save Department</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Fresh Confirm Modal -->
+    <div id="startFreshModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeStartFreshModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6" onclick="event.stopPropagation()">
+            <div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-3xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Reset Workforce Data?</h3>
+            <p class="text-sm text-slate-500 mb-6">Are you sure you want to clear all staff, leaves, and departments for this organization? This action cannot be undone.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeStartFreshModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="executeStartFresh()" class="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 shadow-md transition">Yes, Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =========================================================================
+         JAVASCRIPT LOGIC
+         ========================================================================= -->
+    <script>
+        const EMPLOYEES_STORAGE_KEY = 'nturn_employees_v1';
+        const MASTER_HUB_KEY = 'nturn_projects_master_v1';
+
+        const DEFAULT_DEPARTMENTS = [
+            { id: 'dept-1', name: 'Engineering & Dev', lead: 'Priya Nair' },
+            { id: 'dept-2', name: 'Design & Marketing', lead: 'Kabir Mehta' },
+            { id: 'dept-3', name: 'Finance & Operations', lead: 'Rohit Sen' }
+        ];
+
+        const DEFAULT_EMPLOYEES = [
+            { id: 'emp-1', code: 'EMP-1001', name: 'Aarav Sharma', department: 'Engineering & Dev', role: 'Staff Systems Architect', email: 'aarav@company.com', phone: '+91 98765 11001', date: '2025-02-15', status: 'Active', salary: 85000 },
+            { id: 'emp-2', code: 'EMP-1002', name: 'Ananya Verma', department: 'Design & Marketing', role: 'UI/UX Visual Designer', email: 'ananya@company.com', phone: '+91 98765 22002', date: '2025-06-10', status: 'Active', salary: 62000 },
+            { id: 'emp-3', code: 'EMP-1003', name: 'Rohan Deshmukh', department: 'Finance & Operations', role: 'Accounts Specialist', email: 'rohan@company.com', phone: '+91 98765 33003', date: '2026-01-20', status: 'On Leave', salary: 54000 }
+        ];
+
+        const DEFAULT_LEAVES = [
+            { id: 'lev-1', empId: 'emp-3', type: 'Sick Leave', fromDate: '2026-10-30', toDate: '2026-11-02', reason: 'Flu recovery', status: 'Approved' }
+        ];
+
+        let hrState = {
+            currency: '₹',
+            activeBusinessId: null,
+            businesses: []
+        };
+
+        let activeTab = 'dashboard';
+        let currentStaffFilter = 'all';
+        let editingEmployeeId = null;
+        let editingDepartmentId = null;
+
+        /* =========================================================================
+           1. INITIALIZATION & DATA MANAGEMENT
+           ========================================================================= */
+        function loadHrState() {
+            try {
+                const raw = localStorage.getItem(EMPLOYEES_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.businesses) hrState = parsed;
+                }
+            } catch (e) {
+                console.error('Error loading employees data:', e);
+            }
+
+            if (!hrState.businesses || hrState.businesses.length === 0) {
+                hrState.businesses = [{
+                    id: 'b-emp-' + Date.now(),
+                    name: 'Core Enterprise Org',
+                    departments: JSON.parse(JSON.stringify(DEFAULT_DEPARTMENTS)),
+                    employees: JSON.parse(JSON.stringify(DEFAULT_EMPLOYEES)),
+                    leaves: JSON.parse(JSON.stringify(DEFAULT_LEAVES))
+                }];
+            }
+
+            document.getElementById('currencySelect').value = hrState.currency || '₹';
+            updateCurrencyLabels();
+            saveHrState(false);
+        }
+
+        function saveHrState(showToastMsg = false) {
+            try {
+                localStorage.setItem(EMPLOYEES_STORAGE_KEY, JSON.stringify(hrState));
+
+                // Sync with Master Hub
+                const masterRaw = localStorage.getItem(MASTER_HUB_KEY);
+                if (masterRaw) {
+                    const master = JSON.parse(masterRaw);
+                    if (!master.appRecords) master.appRecords = {};
+
+                    let allRecords = [];
+                    hrState.businesses.forEach(b => {
+                        b.employees.forEach(e => {
+                            allRecords.push({
+                                title: `${e.name} [${e.code || 'EMP'}]`,
+                                value: `${e.role} (${b.name})`,
+                                date: e.date
+                            });
+                        });
+                    });
+
+                    master.appRecords['employees'] = allRecords;
+                    master.nturnEmployeesFullData = hrState;
+                    localStorage.setItem(MASTER_HUB_KEY, JSON.stringify(master));
+                }
+
+                if (showToastMsg) showToast('Saved to LocalStorage');
+            } catch (err) {
+                showToast('Storage limit reached! Please export backup.', 'error');
+            }
+        }
+
+        function getActiveBusiness() {
+            return hrState.businesses.find(b => b.id === hrState.activeBusinessId) || hrState.businesses[0];
+        }
+
+        function getEmployeeName(eid) {
+            const b = getActiveBusiness();
+            const e = (b.employees || []).find(x => x.id === eid);
+            return e ? e.name : 'Unknown Employee';
+        }
+
+        function formatMoney(num) {
+            const sym = hrState.currency || '₹';
+            const clean = Number(num) || 0;
+            return sym + clean.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        }
+
+        function updateCurrencyLabels() {
+            document.querySelectorAll('.currency-label').forEach(el => {
+                el.textContent = hrState.currency || '₹';
+            });
+        }
+
+        function changeCurrency(newSymbol) {
+            hrState.currency = newSymbol;
+            updateCurrencyLabels();
+            saveHrState(false);
+            if (hrState.activeBusinessId) renderAllViews();
+            showToast(`Currency updated to ${newSymbol}`);
+        }
+
+        /* =========================================================================
+           2. VIEW ROUTING
+           ========================================================================= */
+        function switchView(viewName) {
+            const selView = document.getElementById('businessSelectorView');
+            const actView = document.getElementById('activeBusinessView');
+
+            if (viewName === 'home') {
+                actView.classList.add('hidden');
+                selView.classList.remove('hidden');
+                hrState.activeBusinessId = null;
+                saveHrState(false);
+                renderBusinessSelector();
+            } else {
+                selView.classList.add('hidden');
+                actView.classList.remove('hidden');
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           3. BUSINESS SELECTOR (HOME)
+           ========================================================================= */
+        function renderBusinessSelector() {
+            const container = document.getElementById('businessListContainer');
+            if (hrState.businesses.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 col-span-full text-center py-10">No organizations found. Add one above.</p>`;
+                return;
+            }
+
+            container.innerHTML = hrState.businesses.map(b => {
+                let payroll = 0;
+                b.employees.forEach(e => {
+                    payroll += (parseFloat(e.salary) || 0);
+                });
+
+                return `
+                    <div onclick="openBusiness('${b.id}')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emp cursor-pointer transition group relative">
+                        <div class="w-12 h-12 rounded-full bg-sky-50 text-emp flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1 truncate">${escapeHtml(b.name)}</h3>
+                        <p class="text-xs text-slate-500 mb-4">${b.employees.length} staff • ${b.departments.length} departments</p>
+                        <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Monthly Payroll</span>
+                            <span class="font-mono font-bold text-slate-800">${formatMoney(payroll)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openBusiness(bId) {
+            hrState.activeBusinessId = bId;
+            saveHrState(false);
+            switchView('active');
+            switchTab('dashboard');
+        }
+
+        function openNewBusinessModal() {
+            document.getElementById('newBusinessNameInput').value = '';
+            document.getElementById('newBusinessModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newBusinessNameInput').focus(), 100);
+        }
+
+        function closeNewBusinessModal() {
+            document.getElementById('newBusinessModal').classList.add('hidden');
+        }
+
+        function saveNewBusiness() {
+            const name = document.getElementById('newBusinessNameInput').value.trim();
+            if (!name) {
+                showToast('Please enter an organization name', 'error');
+                return;
+            }
+            
+            const newB = {
+                id: 'b-emp-' + Date.now(),
+                name: name,
+                departments: [{ id: 'dept-' + Date.now(), name: 'General Operations', lead: 'Administrator' }],
+                employees: [],
+                leaves: []
+            };
+            hrState.businesses.unshift(newB);
+            closeNewBusinessModal();
+            saveHrState(true);
+            openBusiness(newB.id);
+            showToast(`Created organization: ${name}`);
+        }
+
+        function openRenameBusinessModal() {
+            const b = getActiveBusiness();
+            if (!b) return;
+            document.getElementById('renameBusinessInput').value = b.name;
+            document.getElementById('renameBusinessModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('renameBusinessInput').select(), 100);
+        }
+
+        function closeRenameBusinessModal() {
+            document.getElementById('renameBusinessModal').classList.add('hidden');
+        }
+
+        function saveRenamedBusiness() {
+            const b = getActiveBusiness();
+            const newName = document.getElementById('renameBusinessInput').value.trim();
+            if (b && newName) {
+                b.name = newName;
+                document.getElementById('activeBusinessNameDisplay').textContent = newName;
+                saveHrState(true);
+                showToast('Organization renamed');
+            }
+            closeRenameBusinessModal();
+        }
+
+        function deleteCurrentBusiness() {
+            if (confirm("Are you sure you want to delete this organization and all its employee records?")) {
+                hrState.businesses = hrState.businesses.filter(b => b.id !== hrState.activeBusinessId);
+                closeRenameBusinessModal();
+                saveHrState(true);
+                switchView('home');
+                showToast('Organization deleted');
+            }
+        }
+
+        /* =========================================================================
+           4. TAB SWITCHING & RENDERING
+           ========================================================================= */
+        function switchTab(tabName) {
+            activeTab = tabName;
+            ['dashboard', 'staff', 'attendance', 'departments'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (t === tabName) {
+                    btn.className = 'emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-emp shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                } else {
+                    btn.className = 'emp-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                }
+            });
+            renderAllViews();
+        }
+
+        function renderAllViews() {
+            const b = getActiveBusiness();
+            if (!b) return;
+            
+            document.getElementById('activeBusinessNameDisplay').textContent = b.name;
+            populateDepartmentDropdowns();
+
+            if (activeTab === 'dashboard') renderDashboardTab();
+            if (activeTab === 'staff') renderStaffDirectory();
+            if (activeTab === 'attendance') renderAttendanceTable();
+            if (activeTab === 'departments') renderDepartmentsList();
+        }
+
+        function populateDepartmentDropdowns() {
+            const b = getActiveBusiness();
+            const filterSel = document.getElementById('staffDeptFilter');
+            const formSel = document.getElementById('empDeptSelect');
+
+            if (filterSel) {
+                filterSel.innerHTML = `<option value="all">All Departments</option>` +
+                    (b.departments || []).map(d => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
+            }
+
+            if (formSel) {
+                formSel.innerHTML = (b.departments || []).map(d => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
+            }
+        }
+
+        function confirmStartFresh() {
+            document.getElementById('startFreshModal').classList.remove('hidden');
+        }
+        
+        function closeStartFreshModal() {
+            document.getElementById('startFreshModal').classList.add('hidden');
+        }
+
+        function executeStartFresh() {
+            const b = getActiveBusiness();
+            if (b) {
+                b.employees = [];
+                b.leaves = [];
+                saveHrState(true);
+                renderAllViews();
+                showToast('Workforce data cleared! Started fresh.', 'success');
+            }
+            closeStartFreshModal();
+        }
+
+        /* =========================================================================
+           5. TAB 1: DASHBOARD
+           ========================================================================= */
+        function renderDashboardTab() {
+            const b = getActiveBusiness();
+            let totalPayroll = 0;
+            let activeStaffCount = 0;
+            let onLeaveCount = 0;
+            let probationCount = 0;
+
+            const deptHeadcounts = {};
+
+            b.employees.forEach(e => {
+                const sal = parseFloat(e.salary) || 0;
+                totalPayroll += sal;
+                deptHeadcounts[e.department] = (deptHeadcounts[e.department] || 0) + 1;
+
+                if (e.status === 'Active') activeStaffCount++;
+                else if (e.status === 'On Leave') onLeaveCount++;
+                else if (e.status === 'Probation') probationCount++;
+            });
+
+            document.getElementById('kpiTotalStaff').textContent = b.employees.length;
+            document.getElementById('kpiActiveSummary').textContent = `${activeStaffCount} active staff members`;
+            document.getElementById('kpiTotalPayroll').textContent = formatMoney(totalPayroll);
+            document.getElementById('kpiOnLeaveCount').textContent = onLeaveCount;
+            document.getElementById('kpiDepartmentCount').textContent = (b.departments || []).length;
+
+            renderDepartmentHeadcounts(deptHeadcounts, b.employees.length);
+            renderStatusRatios(activeStaffCount, onLeaveCount, probationCount, b.employees.length);
+            renderRecentStaffTable();
+        }
+
+        function renderDepartmentHeadcounts(deptMap, totalStaff) {
+            const container = document.getElementById('departmentHeadcountContainer');
+            const sorted = Object.entries(deptMap).sort((a, b) => b[1] - a[1]);
+
+            if (sorted.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No department distribution recorded yet.</p>`;
+                return;
+            }
+
+            container.innerHTML = sorted.map(([dept, count]) => {
+                const pct = totalStaff > 0 ? Math.round((count / totalStaff) * 100) : 0;
+                return `
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                            <span class="truncate">${escapeHtml(dept)}</span>
+                            <span class="font-mono text-slate-900">${count} (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-emp rounded-full" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStatusRatios(active, onLeave, probation, total) {
+            const container = document.getElementById('statusRatioContainer');
+            if (total === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No staff members enrolled.</p>`;
+                return;
+            }
+
+            const items = [
+                { label: 'Active', count: active, color: 'bg-emerald-500' },
+                { label: 'On Leave', count: onLeave, color: 'bg-amber-500' },
+                { label: 'Probation', count: probation, color: 'bg-sky-500' }
+            ];
+
+            container.innerHTML = items.map(item => {
+                const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                return `
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                            <span>${item.label}</span>
+                            <span class="font-mono text-slate-900">${item.count} staff (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${item.color} rounded-full" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRecentStaffTable() {
+            const tbody = document.getElementById('recentStaffTbody');
+            const b = getActiveBusiness();
+            const recent = [...b.employees].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+            if (recent.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400">No staff members onboarded yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = recent.map(e => {
+                const statusColor = e.status === 'Active' ? 'emerald' : e.status === 'On Leave' ? 'amber' : 'sky';
+                return `
+                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="editEmployee('${e.id}')">
+                        <td class="px-5 py-3">
+                            <div class="font-bold text-slate-900">${escapeHtml(e.name)}</div>
+                            <div class="text-[11px] text-slate-400 font-mono">${escapeHtml(e.code || 'EMP')}</div>
+                        </td>
+                        <td class="px-5 py-3 text-slate-700 text-xs">
+                            <div class="font-semibold">${escapeHtml(e.role)}</div>
+                            <div class="text-slate-400">${escapeHtml(e.department)}</div>
+                        </td>
+                        <td class="px-5 py-3 text-slate-500 font-mono text-xs whitespace-nowrap">${escapeHtml(e.date)}</td>
+                        <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-${statusColor}-100 text-${statusColor}-800">${escapeHtml(e.status)}</span></td>
+                        <td class="px-5 py-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">${formatMoney(e.salary)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================================
+           6. TAB 2: STAFF DIRECTORY
+           ========================================================================= */
+        function setStaffFilter(filterType) {
+            currentStaffFilter = filterType;
+            document.querySelectorAll('.stf-flt-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'shadow-2xs', 'text-slate-900');
+            });
+            const activeBtn = document.getElementById(`flt-stf-${filterType}`);
+            if (activeBtn) activeBtn.classList.add('bg-white', 'shadow-2xs');
+            renderStaffDirectory();
+        }
+
+        function renderStaffDirectory() {
+            const container = document.getElementById('staffCardsContainer');
+            const query = (document.getElementById('staffSearchInput')?.value || '').trim().toLowerCase();
+            const deptFilter = document.getElementById('staffDeptFilter')?.value || 'all';
+            const b = getActiveBusiness();
+
+            const filtered = b.employees.filter(e => {
+                if (currentStaffFilter !== 'all' && e.status !== currentStaffFilter) return false;
+                if (deptFilter !== 'all' && e.department !== deptFilter) return false;
+                if (query && !e.name.toLowerCase().includes(query) && !e.role.toLowerCase().includes(query) && !e.email.toLowerCase().includes(query)) return false;
+                return true;
+            }).sort((a, b) => a.name.localeCompare(b.name));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400">No staff members match the selected filters.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(e => {
+                const statusColor = e.status === 'Active' ? 'emerald' : e.status === 'On Leave' ? 'amber' : 'sky';
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs relative group">
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-xl bg-sky-100 text-emp flex items-center justify-center font-bold text-sm uppercase shrink-0">
+                                    ${e.name.charAt(0)}
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-slate-900 text-sm leading-tight truncate">${escapeHtml(e.name)}</h4>
+                                    <p class="text-[11px] text-slate-500 font-medium truncate">${escapeHtml(e.role)}</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-${statusColor}-100 text-${statusColor}-800 shrink-0">${escapeHtml(e.status)}</span>
+                        </div>
+
+                        <div class="space-y-1.5 mb-4 text-xs text-slate-600">
+                            <div class="flex items-center gap-2 truncate"><i class="fa-solid fa-sitemap text-slate-400 w-3"></i> ${escapeHtml(e.department)}</div>
+                            <div class="flex items-center gap-2 truncate"><i class="fa-solid fa-envelope text-slate-400 w-3"></i> ${escapeHtml(e.email)}</div>
+                            <div class="flex items-center gap-2 truncate"><i class="fa-solid fa-phone text-slate-400 w-3"></i> ${escapeHtml(e.phone || 'No phone')}</div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="font-mono font-bold text-slate-900">${formatMoney(e.salary)}<span class="text-slate-400 font-normal">/mo</span></span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="editEmployee('${e.id}')" class="p-1 text-slate-400 hover:text-emp" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="deleteEmployee('${e.id}')" class="p-1 text-slate-400 hover:text-rose-600" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteEmployee(id) {
+            if (confirm("Remove this staff member from the organization?")) {
+                const b = getActiveBusiness();
+                b.employees = b.employees.filter(e => e.id !== id);
+                b.leaves = (b.leaves || []).filter(l => l.empId !== id);
+                saveHrState(true);
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           7. TAB 3: ATTENDANCE & LEAVES
+           ========================================================================= */
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('leavesTableBody');
+            const b = getActiveBusiness();
+            const leaves = b.leaves || [];
+
+            if (leaves.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-10 text-center text-slate-400">No active leave records filed.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = leaves.map(l => {
+                const statusColor = l.status === 'Approved' ? 'emerald' : 'amber';
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-5 py-3 font-semibold text-slate-900">${escapeHtml(getEmployeeName(l.empId))}</td>
+                        <td class="px-5 py-3 text-slate-600 text-xs">${escapeHtml(l.type)}</td>
+                        <td class="px-5 py-3 font-mono text-slate-500 text-xs whitespace-nowrap">${escapeHtml(l.fromDate)} to ${escapeHtml(l.toDate)}</td>
+                        <td class="px-5 py-3 text-slate-600 text-xs">${escapeHtml(l.reason || 'Personal')}</td>
+                        <td class="px-5 py-3">
+                            <button onclick="toggleLeaveApproval('${l.id}')" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-${statusColor}-100 text-${statusColor}-800 hover:opacity-80 transition">
+                                ${l.status === 'Approved' ? '✅ Approved' : '⏳ Pending'}
+                            </button>
+                        </td>
+                        <td class="px-5 py-3 text-right">
+                            <button onclick="deleteLeave('${l.id}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleLeaveApproval(id) {
+            const b = getActiveBusiness();
+            const l = (b.leaves || []).find(x => x.id === id);
+            if (!l) return;
+
+            l.status = l.status === 'Approved' ? 'Pending' : 'Approved';
+            
+            // Sync employee status
+            const emp = b.employees.find(e => e.id === l.empId);
+            if (emp) {
+                emp.status = l.status === 'Approved' ? 'On Leave' : 'Active';
+            }
+
+            saveHrState(true);
+            renderAllViews();
+        }
+
+        function deleteLeave(id) {
+            const b = getActiveBusiness();
+            b.leaves = (b.leaves || []).filter(l => l.id !== id);
+            saveHrState(true);
+            renderAllViews();
+        }
+
+        /* =========================================================================
+           8. TAB 4: DEPARTMENTS
+           ========================================================================= */
+        function renderDepartmentsList() {
+            const container = document.getElementById('departmentsGridContainer');
+            const b = getActiveBusiness();
+            const depts = b.departments || [];
+
+            document.getElementById('departmentCountBadge').textContent = depts.length;
+
+            container.innerHTML = depts.map(d => {
+                let staffCount = 0;
+                let deptPayroll = 0;
+
+                b.employees.forEach(e => {
+                    if (e.department === d.name) {
+                        staffCount++;
+                        deptPayroll += (parseFloat(e.salary) || 0);
+                    }
+                });
+
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs relative group">
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-10 h-10 rounded-xl bg-purple-50 text-plum flex items-center justify-center font-bold text-sm shrink-0">
+                                    <i class="fa-solid fa-sitemap"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-slate-900 text-sm truncate">${escapeHtml(d.name)}</h4>
+                                    <p class="text-[11px] text-slate-400">Head: ${escapeHtml(d.lead || 'Not assigned')}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-700">${staffCount} staff members</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-slate-500">${formatMoney(deptPayroll)}</span>
+                                ${depts.length > 1 ? `<button onclick="deleteDepartment('${d.id}')" class="p-1 text-slate-400 hover:text-rose-600" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================================
+           9. EMPLOYEE MODAL & ACTIONS
+           ========================================================================= */
+        function openEmployeeModal() {
+            const b = getActiveBusiness();
+            if ((b.departments || []).length === 0) {
+                showToast('Please add at least one department first', 'error');
+                switchTab('departments');
+                return;
+            }
+
+            editingEmployeeId = null;
+            document.getElementById('employeeModalTitle').textContent = 'Onboard New Staff Member';
+            document.getElementById('empNameInput').value = '';
+            document.getElementById('empCodeInput').value = 'EMP-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('empRoleInput').value = '';
+            document.getElementById('empEmailInput').value = '';
+            document.getElementById('empPhoneInput').value = '';
+            document.getElementById('empDateInput').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('empStatusSelect').value = 'Active';
+            document.getElementById('empSalaryInput').value = '50000';
+
+            populateDepartmentDropdowns();
+            document.getElementById('employeeModal').classList.remove('hidden');
+        }
+
+        function editEmployee(id) {
+            const b = getActiveBusiness();
+            const e = b.employees.find(x => x.id === id);
+            if (!e) return;
+
+            editingEmployeeId = id;
+            document.getElementById('employeeModalTitle').textContent = `Edit Staff: ${e.name}`;
+            document.getElementById('empNameInput').value = e.name;
+            document.getElementById('empCodeInput').value = e.code || '';
+            document.getElementById('empRoleInput').value = e.role || '';
+            document.getElementById('empEmailInput').value = e.email || '';
+            document.getElementById('empPhoneInput').value = e.phone || '';
+            document.getElementById('empDateInput').value = e.date || '';
+            document.getElementById('empStatusSelect').value = e.status || 'Active';
+            document.getElementById('empSalaryInput').value = e.salary || 0;
+
+            populateDepartmentDropdowns();
+            document.getElementById('empDeptSelect').value = e.department;
+
+            document.getElementById('employeeModal').classList.remove('hidden');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').classList.add('hidden');
+        }
+
+        function saveEmployee() {
+            const name = document.getElementById('empNameInput').value.trim();
+            const code = document.getElementById('empCodeInput').value.trim();
+            const department = document.getElementById('empDeptSelect').value;
+            const role = document.getElementById('empRoleInput').value.trim();
+            const email = document.getElementById('empEmailInput').value.trim();
+            const phone = document.getElementById('empPhoneInput').value.trim();
+            const date = document.getElementById('empDateInput').value;
+            const status = document.getElementById('empStatusSelect').value;
+            const salary = parseFloat(document.getElementById('empSalaryInput').value) || 0;
+
+            if (!name || !email || !role) {
+                showToast('Name, Role, and Email are mandatory', 'error');
+                return;
+            }
+
+            const b = getActiveBusiness();
+
+            if (editingEmployeeId) {
+                const existing = b.employees.find(e => e.id === editingEmployeeId);
+                if (existing) {
+                    existing.name = name; existing.code = code; existing.department = department;
+                    existing.role = role; existing.email = email; existing.phone = phone;
+                    existing.date = date; existing.status = status; existing.salary = salary;
+                }
+            } else {
+                b.employees.unshift({
+                    id: 'emp-' + Date.now(),
+                    name, code, department, role, email, phone, date, status, salary
+                });
+            }
+
+            saveHrState(true);
+            closeEmployeeModal();
+            renderAllViews();
+        }
+
+        /* =========================================================================
+           10. LEAVE & DEPARTMENT MODALS
+           ========================================================================= */
+        function openLeaveModal() {
+            const b = getActiveBusiness();
+            if (b.employees.length === 0) {
+                showToast('Please onboard staff before logging leaves', 'error');
+                return;
+            }
+
+            const sel = document.getElementById('leaveEmpSelect');
+            sel.innerHTML = b.employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('leaveFromInput').value = today;
+            document.getElementById('leaveToInput').value = today;
+            document.getElementById('leaveReasonInput').value = '';
+
+            document.getElementById('leaveModal').classList.remove('hidden');
+        }
+
+        function closeLeaveModal() {
+            document.getElementById('leaveModal').classList.add('hidden');
+        }
+
+        function saveLeave() {
+            const empId = document.getElementById('leaveEmpSelect').value;
+            const type = document.getElementById('leaveTypeSelect').value;
+            const status = document.getElementById('leaveStatusSelect').value;
+            const fromDate = document.getElementById('leaveFromInput').value;
+            const toDate = document.getElementById('leaveToInput').value;
+            const reason = document.getElementById('leaveReasonInput').value.trim();
+
+            if (!fromDate || !toDate) {
+                showToast('Please provide leave dates', 'error');
+                return;
+            }
+
+            const b = getActiveBusiness();
+            if (!b.leaves) b.leaves = [];
+
+            b.leaves.unshift({
+                id: 'lev-' + Date.now(),
+                empId, type, status, fromDate, toDate, reason
+            });
+
+            // If approved, update status to on leave
+            if (status === 'Approved') {
+                const emp = b.employees.find(e => e.id === empId);
+                if (emp) emp.status = 'On Leave';
+            }
+
+            saveHrState(true);
+            closeLeaveModal();
+            renderAllViews();
+        }
+
+        function openDepartmentModal() {
+            editingDepartmentId = null;
+            document.getElementById('deptNameInput').value = '';
+            document.getElementById('deptLeadInput').value = '';
+            document.getElementById('departmentModal').classList.remove('hidden');
+        }
+
+        function closeDepartmentModal() {
+            document.getElementById('departmentModal').classList.add('hidden');
+        }
+
+        function saveDepartment() {
+            const name = document.getElementById('deptNameInput').value.trim();
+            const lead = document.getElementById('deptLeadInput').value.trim();
+
+            if (!name) {
+                showToast('Department name is required', 'error');
+                return;
+            }
+
+            const b = getActiveBusiness();
+            if (!b.departments) b.departments = [];
+
+            b.departments.push({
+                id: 'dept-' + Date.now(),
+                name, lead
+            });
+
+            saveHrState(true);
+            closeDepartmentModal();
+            renderAllViews();
+        }
+
+        function deleteDepartment(did) {
+            if (confirm("Delete this department? Assigned employees will remain.")) {
+                const b = getActiveBusiness();
+                b.departments = (b.departments || []).filter(d => d.id !== did);
+                saveHrState(true);
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           11. UTILS & MODAL ESCAPE
+           ========================================================================= */
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold text-white flex items-center gap-2 transition ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check text-sky-400'}"></i><span>${escapeHtml(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEmployeeModal();
+                closeLeaveModal();
+                closeDepartmentModal();
+                closeNewBusinessModal();
+                closeRenameBusinessModal();
+                closeStartFreshModal();
+            }
+        });
+
+        window.onload = function() {
+            loadHrState();
+            if (hrState.activeBusinessId) {
+                switchView('active');
+                switchTab('dashboard');
+            } else {
+                switchView('home');
+            }
+        };
+    </script>
+</body>
+</html>

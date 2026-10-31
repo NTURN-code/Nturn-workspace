@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTURN Projects — Agile Kanban, Sprints & Milestones</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        plum: {
+                            DEFAULT: '#714B67',
+                            hover: '#5d3d54',
+                            light: '#f5eff4'
+                        },
+                        proj: {
+                            DEFAULT: '#059669', /* Emerald / Agile Green */
+                            hover: '#047857',
+                            light: '#ecfdf5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        .kanban-col::-webkit-scrollbar {
+            width: 5px;
+        }
+        .kanban-col::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .kanban-col::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- =========================================================================
+         VIEW 1: PROJECT SELECTOR / HOME DASHBOARD
+         ========================================================================= -->
+    <div id="businessSelectorView" class="min-h-screen flex flex-col bg-slate-50">
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-plum hover:bg-plum-hover shadow-2xs transition" title="Return to NTURN Projects Hub">
+                    <span class="text-amber-300 text-xs">➕</span>
+                    <span>NTURN Hub</span>
+                </a>
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-proj flex items-center justify-center font-bold text-sm shadow-2xs">
+                        <i class="fa-solid fa-diagram-project"></i>
+                    </div>
+                    <span class="font-bold text-base sm:text-lg text-slate-800 tracking-tight">Project Workspaces</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openNewProjectModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">Add Project</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-10">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">Projects &amp; Sprint Boards</h1>
+                <p class="text-slate-500 text-sm">Select an active workspace to access its Kanban board, track sprints, and manage delivery milestones.</p>
+            </div>
+
+            <div id="projectListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <!-- Project cards populated via JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         VIEW 2: ACTIVE PROJECT WORKSPACE
+         ========================================================================= -->
+    <div id="activeProjectView" class="hidden min-h-screen flex flex-col bg-slate-50">
+        
+        <!-- TOP NAVIGATION HEADER -->
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-2xs">
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button onclick="switchView('home')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition" title="Back to All Projects">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span class="hidden sm:inline">Projects</span>
+                </button>
+
+                <span class="h-5 w-[1px] bg-slate-200"></span>
+
+                <div class="flex items-center gap-2 max-w-[150px] sm:max-w-xs cursor-pointer" onclick="openRenameProjectModal()">
+                    <div class="w-8 h-8 rounded-lg bg-proj text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <span id="activeProjectNameDisplay" class="font-bold text-base sm:text-lg text-slate-800 tracking-tight truncate hover:text-proj transition" title="Click to rename project">Project Name</span>
+                </div>
+            </div>
+
+            <!-- 3 Main Tabs: Kanban Board, Milestones, Velocity Analytics -->
+            <nav class="flex items-center bg-slate-100 p-1 rounded-xl w-full sm:w-auto order-3 lg:order-2 justify-center overflow-x-auto">
+                <button onclick="switchTab('board')" id="tabBtn-board" class="proj-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-proj shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-bars-staggered"></i> <span>Kanban Board</span>
+                </button>
+                <button onclick="switchTab('milestones')" id="tabBtn-milestones" class="proj-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-flag-checkered"></i> <span>Milestones</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="tabBtn-analytics" class="proj-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-line"></i> <span>Sprint Health</span>
+                </button>
+            </nav>
+
+            <div class="flex items-center gap-2 order-2 lg:order-3">
+                <button onclick="openTaskModal()" class="px-3 sm:px-4 py-1.5 rounded-lg bg-proj hover:bg-proj-hover text-white font-semibold text-xs sm:text-sm shadow-2xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">Add Task</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6">
+
+            <!-- =====================================================================
+                 TAB 1: AGILE KANBAN BOARD
+                 ===================================================================== -->
+            <section id="view-board" class="space-y-4">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Sprint Kanban Columns</h2>
+                        <p class="text-xs text-slate-400">Move cards across stages or open details to check off subtasks.</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="openTaskModal()" class="px-3.5 py-1.5 rounded-xl bg-proj hover:bg-proj-hover text-white font-semibold text-xs shadow-2xs transition">
+                            + New Task Card
+                        </button>
+                        <button onclick="confirmStartFresh()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 border border-slate-200 font-semibold text-xs transition" title="Clear board for this project">
+                            <i class="fa-solid fa-rotate-left"></i> Start Fresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Agile Columns: Backlog, In Progress, Review / QA, Done -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-4 items-start">
+                    
+                    <!-- 1. Backlog -->
+                    <div class="bg-slate-100/90 rounded-2xl p-3.5 border border-slate-200 flex flex-col min-h-[500px]">
+                        <div class="flex items-center justify-between mb-3 px-1">
+                            <div class="flex items-center gap-2 font-bold text-xs text-slate-700">
+                                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                                <span>Backlog</span>
+                            </div>
+                            <span id="badge-count-backlog" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">0</span>
+                        </div>
+                        <div id="col-tasks-backlog" class="kanban-col flex-1 space-y-2.5 overflow-y-auto max-h-[68vh] pr-0.5"></div>
+                    </div>
+
+                    <!-- 2. In Progress -->
+                    <div class="bg-sky-50/80 rounded-2xl p-3.5 border border-sky-200/80 flex flex-col min-h-[500px]">
+                        <div class="flex items-center justify-between mb-3 px-1">
+                            <div class="flex items-center gap-2 font-bold text-xs text-sky-800">
+                                <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                                <span>In Progress</span>
+                            </div>
+                            <span id="badge-count-in_progress" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-sky-100 text-sky-800">0</span>
+                        </div>
+                        <div id="col-tasks-in_progress" class="kanban-col flex-1 space-y-2.5 overflow-y-auto max-h-[68vh] pr-0.5"></div>
+                    </div>
+
+                    <!-- 3. Review / QA -->
+                    <div class="bg-amber-50/80 rounded-2xl p-3.5 border border-amber-200/80 flex flex-col min-h-[500px]">
+                        <div class="flex items-center justify-between mb-3 px-1">
+                            <div class="flex items-center gap-2 font-bold text-xs text-amber-800">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                <span>Review &amp; QA</span>
+                            </div>
+                            <span id="badge-count-review" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">0</span>
+                        </div>
+                        <div id="col-tasks-review" class="kanban-col flex-1 space-y-2.5 overflow-y-auto max-h-[68vh] pr-0.5"></div>
+                    </div>
+
+                    <!-- 4. Done -->
+                    <div class="bg-emerald-50/80 rounded-2xl p-3.5 border border-emerald-200/80 flex flex-col min-h-[500px]">
+                        <div class="flex items-center justify-between mb-3 px-1">
+                            <div class="flex items-center gap-2 font-bold text-xs text-emerald-900">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                <span>Done 🎉</span>
+                            </div>
+                            <span id="badge-count-done" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">0</span>
+                        </div>
+                        <div id="col-tasks-done" class="kanban-col flex-1 space-y-2.5 overflow-y-auto max-h-[68vh] pr-0.5"></div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 2: MILESTONES & PHASES
+                 ===================================================================== -->
+            <section id="view-milestones" class="hidden space-y-5">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Project Milestones &amp; Release Phases</h2>
+                        <p class="text-xs text-slate-400">Track overarching phase deliverables, target deadlines, and percentage completions.</p>
+                    </div>
+
+                    <button onclick="openMilestoneModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition whitespace-nowrap">
+                        + Add Milestone
+                    </button>
+                </div>
+
+                <div class="space-y-3.5" id="milestonesListContainer">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- =====================================================================
+                 TAB 3: SPRINT HEALTH & VELOCITY ANALYTICS
+                 ===================================================================== -->
+            <section id="view-analytics" class="hidden space-y-6">
+                <!-- 4 KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Tasks</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-proj flex items-center justify-center">
+                                <i class="fa-solid fa-list-check"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalTasks" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0</div>
+                        <p id="kpiCompletedTasksSub" class="text-[11px] text-slate-500 mt-1.5">0 tasks finished</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Completion Velocity</span>
+                            <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                        </div>
+                        <div id="kpiVelocityPercent" class="text-2xl sm:text-3xl font-extrabold text-sky-600 font-mono">0%</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Sprint throughput progress</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Estimated Effort</span>
+                            <div class="w-8 h-8 rounded-xl bg-purple-50 text-plum flex items-center justify-center">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalHours" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0h</div>
+                        <p id="kpiHoursLoggedSub" class="text-[11px] text-slate-500 mt-1.5">0h logged so far</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Milestones</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <i class="fa-solid fa-flag-checkered"></i>
+                            </div>
+                        </div>
+                        <div id="kpiTotalMilestones" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">0</div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">Release checkpoints</p>
+                    </div>
+                </div>
+
+                <!-- Priority & Assignee Breakdown -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    <div class="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+                        <div class="mb-4">
+                            <h3 class="font-bold text-sm sm:text-base text-slate-800">Task Priority Distribution</h3>
+                            <p class="text-xs text-slate-400">Tasks categorized by urgency</p>
+                        </div>
+                        <div id="priorityBreakdownContainer" class="space-y-3.5 my-auto">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col">
+                        <div class="mb-4">
+                            <h3 class="font-bold text-sm sm:text-base text-slate-800">Team Workload Distribution</h3>
+                            <p class="text-xs text-slate-400">Assigned task distribution across members</p>
+                        </div>
+                        <div id="assigneeBreakdownContainer" class="space-y-3.5 my-auto">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         MODALS
+         ========================================================================= -->
+
+    <!-- New Project Workspace Modal -->
+    <div id="newProjectModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeNewProjectModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Add Project Workspace</h3>
+                <button onclick="closeNewProjectModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Project Name</label>
+                    <input type="text" id="newProjectNameInput" placeholder="e.g. NTURN Web App 2.0" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-proj font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeNewProjectModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveNewProject()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Project Modal -->
+    <div id="renameProjectModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeRenameProjectModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Rename Project</h3>
+                <button onclick="closeRenameProjectModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <input type="text" id="renameProjectInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-proj font-semibold">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-2">
+                <button onclick="deleteCurrentProject()" class="text-xs font-semibold text-rose-600 hover:text-rose-700"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                <div class="flex gap-2">
+                    <button onclick="closeRenameProjectModal()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                    <button onclick="saveRenamedProject()" class="px-4 py-2 rounded-xl bg-proj hover:bg-proj-hover text-white text-xs font-semibold shadow-sm transition">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal (Rich Agile Card) -->
+    <div id="taskModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onclick="closeTaskModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-auto" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 bg-proj text-white flex items-center justify-between">
+                <h3 id="taskModalTitle" class="font-bold text-base">New Task Card</h3>
+                <button onclick="closeTaskModal()" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Task Title *</label>
+                    <input type="text" id="taskTitleInput" placeholder="e.g. Implement OAuth2 Google Login API" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:border-proj focus:bg-white">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Priority</label>
+                        <select id="taskPrioritySelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-proj focus:bg-white">
+                            <option value="Urgent">🔥 Urgent Priority</option>
+                            <option value="High">⚡ High Priority</option>
+                            <option value="Normal" selected>🔹 Normal Priority</option>
+                            <option value="Low">☕ Low / Backlog</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Due Date</label>
+                        <input type="date" id="taskDueDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-proj focus:bg-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Assignee</label>
+                        <input type="text" id="taskAssigneeInput" placeholder="e.g. Aarav Sharma" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-proj focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Column Stage</label>
+                        <select id="taskStageSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-proj focus:bg-white">
+                            <option value="backlog">Backlog</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="review">Review / QA</option>
+                            <option value="done">Done 🎉</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Estimated Hours</label>
+                        <input type="number" id="taskEstHoursInput" value="4" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-mono focus:outline-none focus:border-proj focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Logged Hours</label>
+                        <input type="number" id="taskLoggedHoursInput" value="0" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-mono focus:outline-none focus:border-proj focus:bg-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Task Description</label>
+                    <textarea id="taskDescInput" rows="2" placeholder="Acceptance criteria or implementation details..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-proj focus:bg-white resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button onclick="closeTaskModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveTask()" class="px-5 py-2 rounded-xl bg-proj hover:bg-proj-hover text-white text-xs font-semibold shadow-sm transition">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestone Modal -->
+    <div id="milestoneModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onclick="closeMilestoneModal()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden my-auto" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 id="milestoneModalTitle" class="font-bold text-slate-800">Add Milestone Phase</h3>
+                <button onclick="closeMilestoneModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs sm:text-sm">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Milestone Name *</label>
+                    <input type="text" id="milestoneNameInput" placeholder="e.g. Phase 1: Prototype Launch" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:outline-none focus:border-proj focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Target Completion Date</label>
+                    <input type="date" id="milestoneDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-proj focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Progress Percentage (%)</label>
+                    <input type="number" id="milestoneProgressInput" value="50" min="0" max="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-bold focus:outline-none focus:border-proj focus:bg-white">
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="closeMilestoneModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="saveMilestone()" class="px-4 py-2 rounded-xl bg-proj hover:bg-proj-hover text-white text-xs font-semibold shadow-sm transition">Save Milestone</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Fresh Confirm Modal -->
+    <div id="startFreshModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeStartFreshModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6" onclick="event.stopPropagation()">
+            <div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-3xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Reset Project Board?</h3>
+            <p class="text-sm text-slate-500 mb-6">Are you sure you want to clear all tasks and milestones for this project? This action cannot be undone.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeStartFreshModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="executeStartFresh()" class="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 shadow-md transition">Yes, Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =========================================================================
+         JAVASCRIPT LOGIC
+         ========================================================================= -->
+    <script>
+        const PROJECTS_STORAGE_KEY = 'nturn_projects_app_v1';
+        const MASTER_HUB_KEY = 'nturn_projects_master_v1';
+
+        const AGILE_COLUMNS = ['backlog', 'in_progress', 'review', 'done'];
+
+        const DEFAULT_MILESTONES = [
+            { id: 'ms-1', name: 'Phase 1: Architecture & UI Prototype', date: '2026-11-05', progress: 100 },
+            { id: 'ms-2', name: 'Phase 2: Full-Stack Integration & API', date: '2026-11-20', progress: 65 },
+            { id: 'ms-3', name: 'Phase 3: Public Beta Release', date: '2026-12-01', progress: 20 }
+        ];
+
+        const DEFAULT_TASKS = [
+            { id: 'tsk-1', title: 'Design Modular Architecture Specs', stage: 'done', priority: 'High', assignee: 'Priya Nair', dueDate: '2026-10-25', estHours: 8, loggedHours: 8, desc: 'Complete breakdown of zero-dependency vanilla JS apps.' },
+            { id: 'tsk-2', title: 'Develop Kanban Card Drag Movement', stage: 'in_progress', priority: 'Urgent', assignee: 'Aarav Sharma', dueDate: '2026-11-02', estHours: 12, loggedHours: 6, desc: 'Smooth single-click card movement across sprint stages.' },
+            { id: 'tsk-3', title: 'End-to-End Cross-Module Data Tests', stage: 'review', priority: 'Normal', assignee: 'Rohan Sen', dueDate: '2026-11-04', estHours: 6, loggedHours: 5, desc: 'Verify synchronization between Sales, Invoicing, and Accounting.' },
+            { id: 'tsk-4', title: 'Prepare User Onboarding Video Guides', stage: 'backlog', priority: 'Low', assignee: 'Ananya Verma', dueDate: '2026-11-15', estHours: 16, loggedHours: 0, desc: 'Screen recording tutorials for client walkthroughs.' }
+        ];
+
+        let projState = {
+            activeProjectId: null,
+            projects: []
+        };
+
+        let activeTab = 'board';
+        let editingTaskId = null;
+        let editingMilestoneId = null;
+
+        /* =========================================================================
+           1. INITIALIZATION & DATA MANAGEMENT
+           ========================================================================= */
+        function loadProjectsState() {
+            try {
+                const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.projects) projState = parsed;
+                }
+            } catch (e) {
+                console.error('Error loading projects data:', e);
+            }
+
+            if (!projState.projects || projState.projects.length === 0) {
+                projState.projects = [{
+                    id: 'p-' + Date.now(),
+                    name: 'NTURN Web App 2.0',
+                    milestones: JSON.parse(JSON.stringify(DEFAULT_MILESTONES)),
+                    tasks: JSON.parse(JSON.stringify(DEFAULT_TASKS))
+                }];
+            }
+
+            saveProjectsState(false);
+        }
+
+        function saveProjectsState(showToastMsg = false) {
+            try {
+                localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projState));
+
+                // Sync with Master Hub
+                const masterRaw = localStorage.getItem(MASTER_HUB_KEY);
+                if (masterRaw) {
+                    const master = JSON.parse(masterRaw);
+                    if (!master.appRecords) master.appRecords = {};
+
+                    let allRecords = [];
+                    projState.projects.forEach(p => {
+                        const doneCount = p.tasks.filter(t => t.stage === 'done').length;
+                        allRecords.push({
+                            title: `${p.name} Board`,
+                            value: `${doneCount}/${p.tasks.length} tasks completed`,
+                            date: new Date().toISOString().slice(0, 10)
+                        });
+                    });
+
+                    master.appRecords['projects'] = allRecords;
+                    master.nturnProjectsFullData = projState;
+                    localStorage.setItem(MASTER_HUB_KEY, JSON.stringify(master));
+                }
+
+                if (showToastMsg) showToast('Saved to LocalStorage');
+            } catch (err) {
+                showToast('Storage limit reached! Please export backup.', 'error');
+            }
+        }
+
+        function getActiveProject() {
+            return projState.projects.find(p => p.id === projState.activeProjectId) || projState.projects[0];
+        }
+
+        /* =========================================================================
+           2. VIEW ROUTING
+           ========================================================================= */
+        function switchView(viewName) {
+            const selView = document.getElementById('businessSelectorView');
+            const actView = document.getElementById('activeProjectView');
+
+            if (viewName === 'home') {
+                actView.classList.add('hidden');
+                selView.classList.remove('hidden');
+                projState.activeProjectId = null;
+                saveProjectsState(false);
+                renderProjectSelector();
+            } else {
+                selView.classList.add('hidden');
+                actView.classList.remove('hidden');
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           3. PROJECT SELECTOR (HOME)
+           ========================================================================= */
+        function renderProjectSelector() {
+            const container = document.getElementById('projectListContainer');
+            if (projState.projects.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 col-span-full text-center py-10">No projects found. Add one above.</p>`;
+                return;
+            }
+
+            container.innerHTML = projState.projects.map(p => {
+                const total = p.tasks.length;
+                const done = p.tasks.filter(t => t.stage === 'done').length;
+                const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+                return `
+                    <div onclick="openProject('${p.id}')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-proj cursor-pointer transition group relative">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 text-proj flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-diagram-project"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1 truncate">${escapeHtml(p.name)}</h3>
+                        <p class="text-xs text-slate-500 mb-4">${total} tasks • ${p.milestones.length} milestones</p>
+                        
+                        <div class="space-y-1.5 pt-3 border-t border-slate-100">
+                            <div class="flex justify-between text-[11px] font-semibold text-slate-600">
+                                <span>Sprint Completion</span>
+                                <span class="font-mono text-proj">${pct}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-proj rounded-full" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openProject(pId) {
+            projState.activeProjectId = pId;
+            saveProjectsState(false);
+            switchView('active');
+            switchTab('board');
+        }
+
+        function openNewProjectModal() {
+            document.getElementById('newProjectNameInput').value = '';
+            document.getElementById('newProjectModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newProjectNameInput').focus(), 100);
+        }
+
+        function closeNewProjectModal() {
+            document.getElementById('newProjectModal').classList.add('hidden');
+        }
+
+        function saveNewProject() {
+            const name = document.getElementById('newProjectNameInput').value.trim();
+            if (!name) {
+                showToast('Please enter a project name', 'error');
+                return;
+            }
+            
+            const newP = {
+                id: 'p-' + Date.now(),
+                name: name,
+                milestones: [],
+                tasks: []
+            };
+            projState.projects.unshift(newP);
+            closeNewProjectModal();
+            saveProjectsState(true);
+            openProject(newP.id);
+            showToast(`Created project: ${name}`);
+        }
+
+        function openRenameProjectModal() {
+            const p = getActiveProject();
+            if (!p) return;
+            document.getElementById('renameProjectInput').value = p.name;
+            document.getElementById('renameProjectModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('renameProjectInput').select(), 100);
+        }
+
+        function closeRenameProjectModal() {
+            document.getElementById('renameProjectModal').classList.add('hidden');
+        }
+
+        function saveRenamedProject() {
+            const p = getActiveProject();
+            const newName = document.getElementById('renameProjectInput').value.trim();
+            if (p && newName) {
+                p.name = newName;
+                document.getElementById('activeProjectNameDisplay').textContent = newName;
+                saveProjectsState(true);
+                showToast('Project renamed');
+            }
+            closeRenameProjectModal();
+        }
+
+        function deleteCurrentProject() {
+            if (confirm("Are you sure you want to delete this project workspace and all its tasks?")) {
+                projState.projects = projState.projects.filter(p => p.id !== projState.activeProjectId);
+                closeRenameProjectModal();
+                saveProjectsState(true);
+                switchView('home');
+                showToast('Project workspace deleted');
+            }
+        }
+
+        /* =========================================================================
+           4. TAB SWITCHING & RENDERING
+           ========================================================================= */
+        function switchTab(tabName) {
+            activeTab = tabName;
+            ['board', 'milestones', 'analytics'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (t === tabName) {
+                    btn.className = 'proj-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-white text-proj shadow-2xs transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                } else {
+                    btn.className = 'proj-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap';
+                }
+            });
+            renderAllViews();
+        }
+
+        function renderAllViews() {
+            const p = getActiveProject();
+            if (!p) return;
+            
+            document.getElementById('activeProjectNameDisplay').textContent = p.name;
+
+            if (activeTab === 'board') renderKanbanBoard();
+            if (activeTab === 'milestones') renderMilestonesList();
+            if (activeTab === 'analytics') renderAnalyticsTab();
+        }
+
+        function confirmStartFresh() {
+            document.getElementById('startFreshModal').classList.remove('hidden');
+        }
+        
+        function closeStartFreshModal() {
+            document.getElementById('startFreshModal').classList.add('hidden');
+        }
+
+        function executeStartFresh() {
+            const p = getActiveProject();
+            if (p) {
+                p.tasks = [];
+                p.milestones = [];
+                saveProjectsState(true);
+                renderAllViews();
+                showToast('Sprint board cleared! Ready for fresh backlog.', 'success');
+            }
+            closeStartFreshModal();
+        }
+
+        /* =========================================================================
+           5. TAB 1: KANBAN BOARD
+           ========================================================================= */
+        function renderKanbanBoard() {
+            const p = getActiveProject();
+
+            AGILE_COLUMNS.forEach(colKey => {
+                const colEl = document.getElementById(`col-tasks-${colKey}`);
+                const badgeEl = document.getElementById(`badge-count-${colKey}`);
+                const tasksInCol = p.tasks.filter(t => t.stage === colKey);
+
+                if (badgeEl) badgeEl.textContent = tasksInCol.length;
+
+                if (colEl) {
+                    if (tasksInCol.length === 0) {
+                        colEl.innerHTML = `<div class="p-4 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 rounded-xl">No tasks</div>`;
+                        return;
+                    }
+
+                    colEl.innerHTML = tasksInCol.map(t => {
+                        const curIdx = AGILE_COLUMNS.indexOf(t.stage);
+                        const canLeft = curIdx > 0;
+                        const canRight = curIdx < AGILE_COLUMNS.length - 1;
+
+                        const priorityBadge = t.priority === 'Urgent'
+                            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">🔥 Urgent</span>`
+                            : t.priority === 'High'
+                            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">⚡ High</span>`
+                            : `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">🔹 ${t.priority}</span>`;
+
+                        return `
+                            <div class="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-sm transition group relative">
+                                <div class="flex items-start justify-between gap-1 mb-2">
+                                    ${priorityBadge}
+                                    <button onclick="editTask('${t.id}')" class="text-slate-300 hover:text-proj p-1 transition opacity-0 group-hover:opacity-100" title="Edit Task">
+                                        <i class="fa-solid fa-pen text-[11px]"></i>
+                                    </button>
+                                </div>
+                                
+                                <h4 class="font-bold text-xs sm:text-sm text-slate-900 leading-snug mb-2 cursor-pointer hover:text-proj transition" onclick="editTask('${t.id}')">${escapeHtml(t.title)}</h4>
+                                
+                                ${t.desc ? `<p class="text-[11px] text-slate-500 line-clamp-2 mb-3">${escapeHtml(t.desc)}</p>` : ''}
+
+                                <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-user text-slate-300 text-[10px]"></i> ${escapeHtml(t.assignee || 'Unassigned')}</span>
+                                    <span class="font-mono">${t.loggedHours || 0}h / ${t.estHours || 0}h</span>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                                    <span class="text-[10px] text-slate-400 font-mono"><i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(t.dueDate || 'No date')}</span>
+                                    
+                                    <div class="flex items-center gap-1">
+                                        ${canLeft ? `<button onclick="moveTaskStage('${t.id}', -1)" class="w-6 h-6 rounded bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]" title="Move Left"><i class="fa-solid fa-chevron-left"></i></button>` : ''}
+                                        ${canRight ? `<button onclick="moveTaskStage('${t.id}', 1)" class="w-6 h-6 rounded bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]" title="Move Right"><i class="fa-solid fa-chevron-right"></i></button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            });
+        }
+
+        function moveTaskStage(taskId, dir) {
+            const p = getActiveProject();
+            const task = p.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const curIdx = AGILE_COLUMNS.indexOf(task.stage);
+            const nextIdx = curIdx + dir;
+            if (nextIdx >= 0 && nextIdx < AGILE_COLUMNS.length) {
+                task.stage = AGILE_COLUMNS[nextIdx];
+                saveProjectsState(true);
+                renderAllViews();
+                if (task.stage === 'done') {
+                    showToast(`Task Finished! 🎉 "${task.title}" completed.`, 'success');
+                }
+            }
+        }
+
+        /* =========================================================================
+           6. TAB 2: MILESTONES
+           ========================================================================= */
+        function renderMilestonesList() {
+            const container = document.getElementById('milestonesListContainer');
+            const p = getActiveProject();
+            const milestones = p.milestones || [];
+
+            if (milestones.length === 0) {
+                container.innerHTML = `<div class="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No project milestones registered yet. Click "+ Add Milestone" above.</div>`;
+                return;
+            }
+
+            container.innerHTML = milestones.map(m => {
+                const isComplete = m.progress >= 100;
+
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl ${isComplete ? 'bg-emerald-100 text-proj' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold text-sm shrink-0">
+                                    <i class="fa-solid fa-flag-checkered"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm sm:text-base leading-tight">${escapeHtml(m.name)}</h4>
+                                    <p class="text-xs text-slate-400 mt-0.5"><i class="fa-regular fa-calendar mr-1"></i>Target Completion: ${escapeHtml(m.date || 'TBD')}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 self-end sm:self-auto">
+                                <span class="font-mono font-bold text-sm ${isComplete ? 'text-proj' : 'text-slate-800'}">${m.progress}% Completed</span>
+                                <button onclick="editMilestone('${m.id}')" class="p-1.5 text-slate-400 hover:text-proj" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="deleteMilestone('${m.id}')" class="p-1.5 text-slate-400 hover:text-rose-600" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${isComplete ? 'bg-proj' : 'bg-sky-500'} rounded-full transition-all duration-500" style="width: ${m.progress}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================================
+           7. TAB 3: VELOCITY & HEALTH ANALYTICS
+           ========================================================================= */
+        function renderAnalyticsTab() {
+            const p = getActiveProject();
+            const totalTasks = p.tasks.length;
+            const doneTasks = p.tasks.filter(t => t.stage === 'done').length;
+            const velocity = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+            let estHours = 0, loggedHours = 0;
+            const priorityCounts = { Urgent: 0, High: 0, Normal: 0, Low: 0 };
+            const assigneeCounts = {};
+
+            p.tasks.forEach(t => {
+                estHours += (parseFloat(t.estHours) || 0);
+                loggedHours += (parseFloat(t.loggedHours) || 0);
+
+                if (priorityCounts[t.priority] !== undefined) priorityCounts[t.priority]++;
+                const who = t.assignee || 'Unassigned';
+                assigneeCounts[who] = (assigneeCounts[who] || 0) + 1;
+            });
+
+            document.getElementById('kpiTotalTasks').textContent = totalTasks;
+            document.getElementById('kpiCompletedTasksSub').textContent = `${doneTasks} tasks finished`;
+            document.getElementById('kpiVelocityPercent').textContent = `${velocity}%`;
+            document.getElementById('kpiTotalHours').textContent = `${estHours}h`;
+            document.getElementById('kpiHoursLoggedSub').textContent = `${loggedHours}h logged so far`;
+            document.getElementById('kpiTotalMilestones').textContent = p.milestones.length;
+
+            renderPriorityDistribution(priorityCounts, totalTasks);
+            renderAssigneeDistribution(assigneeCounts, totalTasks);
+        }
+
+        function renderPriorityDistribution(counts, total) {
+            const container = document.getElementById('priorityBreakdownContainer');
+            if (total === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No tasks logged.</p>`;
+                return;
+            }
+
+            const items = [
+                { label: '🔥 Urgent', count: counts.Urgent, color: 'bg-rose-500' },
+                { label: '⚡ High', count: counts.High, color: 'bg-amber-500' },
+                { label: '🔹 Normal', count: counts.Normal, color: 'bg-sky-500' },
+                { label: '☕ Low / Backlog', count: counts.Low, color: 'bg-slate-400' }
+            ];
+
+            container.innerHTML = items.map(item => {
+                const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                return `
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                            <span>${item.label}</span>
+                            <span class="font-mono text-slate-900">${item.count} tasks (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${item.color} rounded-full" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAssigneeDistribution(counts, total) {
+            const container = document.getElementById('assigneeBreakdownContainer');
+            const entries = Object.entries(counts);
+
+            if (total === 0 || entries.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No assigned tasks.</p>`;
+                return;
+            }
+
+            container.innerHTML = entries.map(([who, count]) => {
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                return `
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                            <span><i class="fa-solid fa-user-circle mr-1 text-slate-400"></i>${escapeHtml(who)}</span>
+                            <span class="font-mono text-slate-900">${count} (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-proj rounded-full" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* =========================================================================
+           8. TASK MODAL ACTIONS
+           ========================================================================= */
+        function openTaskModal() {
+            editingTaskId = null;
+            document.getElementById('taskModalTitle').textContent = 'New Task Card';
+            document.getElementById('taskTitleInput').value = '';
+            document.getElementById('taskPrioritySelect').value = 'Normal';
+            document.getElementById('taskDueDateInput').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('taskAssigneeInput').value = '';
+            document.getElementById('taskStageSelect').value = 'backlog';
+            document.getElementById('taskEstHoursInput').value = 4;
+            document.getElementById('taskLoggedHoursInput').value = 0;
+            document.getElementById('taskDescInput').value = '';
+
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function editTask(id) {
+            const p = getActiveProject();
+            const t = p.tasks.find(x => x.id === id);
+            if (!t) return;
+
+            editingTaskId = id;
+            document.getElementById('taskModalTitle').textContent = 'Edit Task Card';
+            document.getElementById('taskTitleInput').value = t.title;
+            document.getElementById('taskPrioritySelect').value = t.priority;
+            document.getElementById('taskDueDateInput').value = t.dueDate || '';
+            document.getElementById('taskAssigneeInput').value = t.assignee || '';
+            document.getElementById('taskStageSelect').value = t.stage;
+            document.getElementById('taskEstHoursInput').value = t.estHours || 0;
+            document.getElementById('taskLoggedHoursInput').value = t.loggedHours || 0;
+            document.getElementById('taskDescInput').value = t.desc || '';
+
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+        }
+
+        function saveTask() {
+            const title = document.getElementById('taskTitleInput').value.trim();
+            const priority = document.getElementById('taskPrioritySelect').value;
+            const dueDate = document.getElementById('taskDueDateInput').value;
+            const assignee = document.getElementById('taskAssigneeInput').value.trim();
+            const stage = document.getElementById('taskStageSelect').value;
+            const estHours = parseFloat(document.getElementById('taskEstHoursInput').value) || 0;
+            const loggedHours = parseFloat(document.getElementById('taskLoggedHoursInput').value) || 0;
+            const desc = document.getElementById('taskDescInput').value.trim();
+
+            if (!title) {
+                showToast('Task title is required', 'error');
+                return;
+            }
+
+            const p = getActiveProject();
+
+            if (editingTaskId) {
+                const existing = p.tasks.find(t => t.id === editingTaskId);
+                if (existing) {
+                    existing.title = title; existing.priority = priority; existing.dueDate = dueDate;
+                    existing.assignee = assignee; existing.stage = stage; existing.estHours = estHours;
+                    existing.loggedHours = loggedHours; existing.desc = desc;
+                }
+            } else {
+                p.tasks.unshift({
+                    id: 'tsk-' + Date.now(),
+                    title, priority, dueDate, assignee, stage, estHours, loggedHours, desc
+                });
+            }
+
+            saveProjectsState(true);
+            closeTaskModal();
+            renderAllViews();
+        }
+
+        /* =========================================================================
+           9. MILESTONE MODAL ACTIONS
+           ========================================================================= */
+        function openMilestoneModal() {
+            editingMilestoneId = null;
+            document.getElementById('milestoneModalTitle').textContent = 'Add Milestone Phase';
+            document.getElementById('milestoneNameInput').value = '';
+            document.getElementById('milestoneDateInput').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('milestoneProgressInput').value = 0;
+
+            document.getElementById('milestoneModal').classList.remove('hidden');
+        }
+
+        function editMilestone(id) {
+            const p = getActiveProject();
+            const m = p.milestones.find(x => x.id === id);
+            if (!m) return;
+
+            editingMilestoneId = id;
+            document.getElementById('milestoneModalTitle').textContent = 'Edit Milestone Phase';
+            document.getElementById('milestoneNameInput').value = m.name;
+            document.getElementById('milestoneDateInput').value = m.date || '';
+            document.getElementById('milestoneProgressInput').value = m.progress || 0;
+
+            document.getElementById('milestoneModal').classList.remove('hidden');
+        }
+
+        function closeMilestoneModal() {
+            document.getElementById('milestoneModal').classList.add('hidden');
+        }
+
+        function saveMilestone() {
+            const name = document.getElementById('milestoneNameInput').value.trim();
+            const date = document.getElementById('milestoneDateInput').value;
+            const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('milestoneProgressInput').value) || 0));
+
+            if (!name) {
+                showToast('Milestone name is required', 'error');
+                return;
+            }
+
+            const p = getActiveProject();
+
+            if (editingMilestoneId) {
+                const existing = p.milestones.find(m => m.id === editingMilestoneId);
+                if (existing) {
+                    existing.name = name; existing.date = date; existing.progress = progress;
+                }
+            } else {
+                p.milestones.push({
+                    id: 'ms-' + Date.now(),
+                    name, date, progress
+                });
+            }
+
+            saveProjectsState(true);
+            closeMilestoneModal();
+            renderAllViews();
+        }
+
+        function deleteMilestone(id) {
+            if (confirm("Remove this milestone checkpoint?")) {
+                const p = getActiveProject();
+                p.milestones = p.milestones.filter(m => m.id !== id);
+                saveProjectsState(true);
+                renderAllViews();
+            }
+        }
+
+        /* =========================================================================
+           10. UTILS & MODAL ESCAPE
+           ========================================================================= */
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold text-white flex items-center gap-2 transition ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check text-emerald-400'}"></i><span>${escapeHtml(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeTaskModal();
+                closeMilestoneModal();
+                closeNewProjectModal();
+                closeRenameProjectModal();
+                closeStartFreshModal();
+            }
+        });
+
+        window.onload = function() {
+            loadProjectsState();
+            if (projState.activeProjectId) {
+                switchView('active');
+                switchTab('board');
+            } else {
+                switchView('home');
+            }
+        };
+    </script>
+</body>
+</html>

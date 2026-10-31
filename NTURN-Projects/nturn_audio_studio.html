@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTURN Audio Studio — Waveform Editor & Mastering</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        plum: {
+                            DEFAULT: '#714B67',
+                            hover: '#5d3d54',
+                            light: '#f5eff4'
+                        },
+                        daw: {
+                            dark: '#0a0a0f',
+                            panel: '#121218',
+                            card: '#1a1a24',
+                            border: '#272736',
+                            green: '#10b981',
+                            cyan: '#06b6d4',
+                            amber: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0f;
+            color: #f8fafc;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Waveform track container */
+        .track-waveform-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* Playhead needle */
+        .playhead-needle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ef4444;
+            pointer-events: none;
+            z-index: 40;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.75);
+        }
+
+        .playhead-handle {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 16px;
+            background: #ef4444;
+            clip-path: polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%);
+            cursor: ew-resize;
+            pointer-events: auto;
+        }
+
+        /* Custom Scrollbar for Tracks */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0e0e14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #272736;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b3b52;
+        }
+
+        /* Sliders */
+        input[type="range"] {
+            accent-color: #10b981;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-daw-dark">
+
+    <!-- =========================================================================
+         1. TOP APP HEADER (STUDIO CONTROLS & EXPORT)
+         ========================================================================= -->
+    <header class="bg-daw-panel border-b border-daw-border px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 z-40">
+        <!-- Left: Back to NTURN + Title -->
+        <div class="flex items-center gap-2.5 sm:gap-3.5">
+            <a href="index.html" class="flex items-center gap-2 text-slate-300 hover:text-white transition group shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-plum text-white flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-plum-hover">
+                    N
+                </div>
+                <div class="hidden sm:flex items-baseline gap-1">
+                    <span class="font-bold text-base tracking-tight text-white">NTURN</span>
+                    <span class="font-semibold text-xs text-daw-green">Audio</span>
+                </div>
+            </a>
+
+            <div class="h-5 w-px bg-daw-border hidden sm:block"></div>
+
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-950 text-daw-green flex items-center justify-center text-xs font-bold border border-emerald-800/60">
+                    <i class="fa-solid fa-waveform-lines"></i>
+                </div>
+                <input 
+                    type="text" 
+                    id="trackTitleInput" 
+                    value="Mastering_Session_01" 
+                    onchange="updateTrackTitle(this.value)"
+                    class="bg-transparent hover:bg-daw-card focus:bg-daw-card px-2 py-1 rounded text-xs sm:text-sm font-semibold text-white focus:outline-none focus:ring-1 focus:ring-daw-green transition w-36 sm:w-56 truncate"
+                >
+            </div>
+        </div>
+
+        <!-- Center: Live Master Timecode -->
+        <div class="flex items-center gap-3 bg-daw-card px-4 py-1.5 rounded-xl border border-daw-border font-mono text-xs sm:text-sm">
+            <span class="text-daw-green font-bold" id="currentTimecodeDisplay">00:00.00</span>
+            <span class="text-slate-600">/</span>
+            <span class="text-slate-400" id="totalDurationDisplay">00:12.00</span>
+        </div>
+
+        <!-- Right: Actions & Export Button -->
+        <div class="flex items-center gap-2">
+            <label class="px-3 py-1.5 rounded-lg border border-daw-border hover:bg-daw-card text-xs font-semibold text-slate-300 hover:text-white cursor-pointer transition flex items-center gap-1.5">
+                <i class="fa-solid fa-cloud-arrow-up text-daw-cyan"></i>
+                <span class="hidden md:inline">Import Audio</span>
+                <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(event)">
+            </label>
+
+            <button onclick="exportAudioWAV()" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download text-[11px]"></i>
+                <span>Export WAV</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- =========================================================================
+         2. MAIN WORKSPACE: SIDEBAR (LEFT) + WAVEFORM TRACK & TRANSPORT (RIGHT)
+         ========================================================================= -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+
+        <!-- LEFT CONTROL DOCK (MIC RECORDER, EQUALIZER, SOUNDBOARD) -->
+        <aside class="w-full md:w-80 lg:w-96 bg-daw-panel border-r border-daw-border flex flex-col shrink-0 overflow-y-auto p-4 space-y-4">
+            
+            <!-- 1. Voice Recording Deck -->
+            <div class="p-4 rounded-2xl bg-daw-card border border-daw-border space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-microphone text-rose-500"></i>
+                        <span>Live Voice Recorder</span>
+                    </span>
+                    <span id="recordingStatusBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
+                        ● REC
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleMicrophoneRecord()" id="micRecordBtn" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle text-[10px]"></i>
+                        <span id="recordBtnText">Record Voice</span>
+                    </button>
+                    <button onclick="loadSampleVoiceNote()" class="px-3 py-2.5 rounded-xl bg-daw-panel hover:bg-slate-800 border border-daw-border text-slate-300 text-xs font-semibold transition" title="Load demo podcast voice note">
+                        Demo
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Master Soundboard Loops (Instant Web Audio Chords) -->
+            <div class="p-4 rounded-2xl bg-daw-card border border-daw-border space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Soundboard &amp; Beats (1-Click)</span>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <button onclick="triggerSoundFx('lofi')" class="p-2.5 rounded-xl bg-daw-panel hover:border-daw-cyan border border-daw-border text-left transition group">
+                        <div class="flex items-center justify-between mb-1">
+                            <i class="fa-solid fa-music text-daw-cyan"></i>
+                            <span class="text-[9px] text-slate-500 font-mono">Loop</span>
+                        </div>
+                        <p class="font-bold text-white text-[11px] truncate">Chill Lo-Fi Beat</p>
+                    </button>
+
+                    <button onclick="triggerSoundFx('bass')" class="p-2.5 rounded-xl bg-daw-panel hover:border-daw-green border border-daw-border text-left transition group">
+                        <div class="flex items-center justify-between mb-1">
+                            <i class="fa-solid fa-bolt text-daw-green"></i>
+                            <span class="text-[9px] text-slate-500 font-mono">Sub</span>
+                        </div>
+                        <p class="font-bold text-white text-[11px] truncate">808 Sub Drop</p>
+                    </button>
+
+                    <button onclick="triggerSoundFx('whoosh')" class="p-2.5 rounded-xl bg-daw-panel hover:border-daw-amber border border-daw-border text-left transition group">
+                        <div class="flex items-center justify-between mb-1">
+                            <i class="fa-solid fa-wind text-daw-amber"></i>
+                            <span class="text-[9px] text-slate-500 font-mono">FX</span>
+                        </div>
+                        <p class="font-bold text-white text-[11px] truncate">Whoosh Transition</p>
+                    </button>
+
+                    <button onclick="triggerSoundFx('riser')" class="p-2.5 rounded-xl bg-daw-panel hover:border-purple-400 border border-daw-border text-left transition group">
+                        <div class="flex items-center justify-between mb-1">
+                            <i class="fa-solid fa-arrow-trend-up text-purple-400"></i>
+                            <span class="text-[9px] text-slate-500 font-mono">Build</span>
+                        </div>
+                        <p class="font-bold text-white text-[11px] truncate">Tension Riser</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Studio 3-Band Equalizer (Bass, Mid, Treble) & Gain -->
+            <div class="p-4 rounded-2xl bg-daw-card border border-daw-border space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Master EQ &amp; Gain</span>
+                    <button onclick="resetEqualizer()" class="text-[10px] text-daw-green font-semibold hover:underline">Reset</button>
+                </div>
+
+                <!-- Bass Boost Slider -->
+                <div>
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Bass (100Hz)</span>
+                        <span id="bassGainDisplay" class="font-mono text-white">0 dB</span>
+                    </div>
+                    <input type="range" id="eqBass" min="-12" max="12" value="0" step="1" oninput="updateEQ('bass', this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Mid Range Slider -->
+                <div>
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Mids (1kHz)</span>
+                        <span id="midGainDisplay" class="font-mono text-white">0 dB</span>
+                    </div>
+                    <input type="range" id="eqMid" min="-12" max="12" value="0" step="1" oninput="updateEQ('mid', this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Treble Slider -->
+                <div>
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Treble (3.5kHz)</span>
+                        <span id="trebleGainDisplay" class="font-mono text-white">0 dB</span>
+                    </div>
+                    <input type="range" id="eqTreble" min="-12" max="12" value="0" step="1" oninput="updateEQ('treble', this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Volume Gain Slider -->
+                <div class="pt-2 border-t border-daw-border">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Master Volume</span>
+                        <span id="masterVolumeDisplay" class="font-mono text-daw-green font-bold">100%</span>
+                    </div>
+                    <input type="range" id="masterVolume" min="0" max="150" value="100" oninput="updateMasterVolume(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+            </div>
+
+            <!-- 4. Playback Speed Multiplier -->
+            <div class="p-3.5 rounded-2xl bg-daw-card border border-daw-border flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-semibold">Speed:</span>
+                <div class="flex items-center gap-1 font-mono">
+                    <button onclick="setPlaybackSpeed(0.5)" class="speed-btn px-2 py-1 rounded bg-daw-panel hover:bg-daw-border text-slate-400">0.5x</button>
+                    <button onclick="setPlaybackSpeed(1.0)" class="speed-btn px-2 py-1 rounded bg-emerald-950 text-daw-green border border-emerald-700/60 font-bold">1.0x</button>
+                    <button onclick="setPlaybackSpeed(1.5)" class="speed-btn px-2 py-1 rounded bg-daw-panel hover:bg-daw-border text-slate-400">1.5x</button>
+                    <button onclick="setPlaybackSpeed(2.0)" class="speed-btn px-2 py-1 rounded bg-daw-panel hover:bg-daw-border text-slate-400">2.0x</button>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- CENTER & RIGHT: WAVEFORM DISPLAY & MULTI-CLIP TRACK -->
+        <main class="flex-1 flex flex-col bg-daw-dark overflow-hidden min-w-0">
+
+            <!-- Tool Command Ribbon: ✂️ Split, Trim, Silence, Loop -->
+            <div class="px-4 py-2.5 border-b border-daw-border bg-daw-panel flex items-center justify-between gap-3 text-xs shrink-0">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button onclick="splitAudioAtPlayhead()" class="px-3.5 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-600/60 text-daw-green font-bold hover:bg-emerald-900 transition flex items-center gap-1.5 shadow-2xs">
+                        <i class="fa-solid fa-scissors"></i>
+                        <span>Split at Playhead (S)</span>
+                    </button>
+
+                    <button onclick="trimSelectedClip()" class="px-3 py-1.5 rounded-lg bg-daw-card hover:bg-daw-border text-slate-300 transition flex items-center gap-1.5" title="Trim selection range">
+                        <i class="fa-solid fa-crop-simple"></i>
+                        <span class="hidden sm:inline">Trim to Selection</span>
+                    </button>
+
+                    <button onclick="applyFadeEffect('in')" class="px-2.5 py-1.5 rounded-lg bg-daw-card hover:bg-daw-border text-slate-300 transition flex items-center gap-1" title="Fade in start">
+                        <i class="fa-solid fa-chart-line-up"></i>
+                        <span class="hidden sm:inline">Fade In</span>
+                    </button>
+
+                    <button onclick="applyFadeEffect('out')" class="px-2.5 py-1.5 rounded-lg bg-daw-card hover:bg-daw-border text-slate-300 transition flex items-center gap-1" title="Fade out end">
+                        <i class="fa-solid fa-chart-line-down"></i>
+                        <span class="hidden sm:inline">Fade Out</span>
+                    </button>
+                </div>
+
+                <!-- Zoom & View Scale -->
+                <div class="flex items-center gap-2 text-slate-400 text-xs">
+                    <i class="fa-solid fa-magnifying-glass-minus"></i>
+                    <input type="range" id="zoomWaveformSlider" min="30" max="160" value="80" oninput="updateWaveformZoom(this.value)" class="w-20 sm:w-28 cursor-pointer">
+                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                </div>
+            </div>
+
+            <!-- Waveform Canvas Viewport (Scrollable with Playhead) -->
+            <div class="flex-1 relative overflow-x-auto overflow-y-hidden bg-daw-dark" id="waveformViewport" onclick="handleWaveformClick(event)">
+                
+                <!-- Playhead Needle (Runs top to bottom across tracks) -->
+                <div class="playhead-needle" id="playheadNeedle" style="left: 0px;">
+                    <div class="playhead-handle" onmousedown="initPlayheadDrag(event)"></div>
+                </div>
+
+                <!-- Dynamic Width Waveform Strip -->
+                <div id="waveformStripInner" class="relative h-full" style="width: 1400px; min-height: 240px;">
+                    
+                    <!-- Time Ruler -->
+                    <div class="h-6 border-b border-daw-border bg-daw-panel/50 relative select-none" id="timeRulerContainer">
+                        <!-- Ticks populated via JS -->
+                    </div>
+
+                    <!-- Real Audio Waveform Canvas Display -->
+                    <div class="p-3 h-[calc(100%-24px)] flex flex-col justify-center">
+                        <div class="relative h-44 rounded-2xl bg-daw-card border border-daw-border overflow-hidden shadow-inner flex items-center justify-center">
+                            <canvas id="waveformCanvas" class="track-waveform-canvas"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Bottom Transport Playbar (Play, Pause, Return, Mic Level) -->
+            <div class="h-20 bg-daw-panel border-t border-daw-border px-4 sm:px-8 flex items-center justify-between shrink-0">
+                <!-- Return / Backward -->
+                <div class="flex items-center gap-2">
+                    <button onclick="returnToStart()" class="w-9 h-9 rounded-xl hover:bg-daw-card text-slate-400 hover:text-white flex items-center justify-center transition" title="Return to Start (Home)">
+                        <i class="fa-solid fa-backward-step text-sm"></i>
+                    </button>
+                    <button onclick="stepSeek(-1)" class="w-9 h-9 rounded-xl hover:bg-daw-card text-slate-400 hover:text-white flex items-center justify-center transition" title="Seek -1s">
+                        <i class="fa-solid fa-rotate-left text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Main Play / Pause Button -->
+                <div class="flex items-center gap-3">
+                    <button onclick="togglePlayback()" id="mainPlayBtn" class="w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition" title="Play / Pause (Space)">
+                        <i class="fa-solid fa-play text-base ml-0.5" id="mainPlayIcon"></i>
+                    </button>
+                </div>
+
+                <!-- Loop & Volume Meter -->
+                <div class="flex items-center gap-3 text-xs">
+                    <button onclick="toggleLoopMode()" id="loopToggleBtn" class="px-3 py-1.5 rounded-lg border border-daw-border text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-repeat text-xs"></i>
+                        <span class="hidden sm:inline">Loop</span>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =========================================================================
+         3. AUDIO STUDIO & WEB AUDIO SYNTH ENGINE
+         ========================================================================= -->
+    <script>
+        const AUDIO_STORAGE_KEY = 'nturn_audio_studio_v1';
+        const MASTER_HUB_KEY = 'nturn_projects_master_v1';
+
+        // Web Audio Context & Nodes
+        let audioCtx = null;
+        let masterGainNode = null;
+        let bassFilter = null;
+        let midFilter = null;
+        let trebleFilter = null;
+        let activeSourceNode = null;
+
+        // Playback & Track State
+        let audioBuffer = null;
+        let currentTime = 0; // seconds
+        let totalDuration = 12.0; // seconds
+        let isPlaying = false;
+        let isLooping = true;
+        let playbackRate = 1.0;
+        let pixelsPerSecond = 80;
+        let playbackTicker = null;
+        let trackTitle = 'Mastering_Session_01';
+
+        // Recording State
+        let mediaRecorder = null;
+        let isRecording = false;
+        let recordedChunks = [];
+
+        /* =========================================================================
+           1. INITIALIZATION & WEB AUDIO SETUP
+           ========================================================================= */
+        function initAudioStudio() {
+            initAudioGraph();
+            setupKeyboardShortcuts();
+            createDefaultSynthesizedTrack();
+            renderTimeRuler();
+            updateTimecodeDisplays();
+        }
+
+        function initAudioGraph() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+
+            // Master Gain
+            masterGainNode = audioCtx.createGain();
+            masterGainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+
+            // 3-Band Equalizer (Biquad Filter Nodes)
+            bassFilter = audioCtx.createBiquadFilter();
+            bassFilter.type = 'lowshelf';
+            bassFilter.frequency.setValueAtTime(100, audioCtx.currentTime);
+            bassFilter.gain.setValueAtTime(0, audioCtx.currentTime);
+
+            midFilter = audioCtx.createBiquadFilter();
+            midFilter.type = 'peaking';
+            midFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            midFilter.Q.setValueAtTime(1.0, audioCtx.currentTime);
+            midFilter.gain.setValueAtTime(0, audioCtx.currentTime);
+
+            trebleFilter = audioCtx.createBiquadFilter();
+            trebleFilter.type = 'highshelf';
+            trebleFilter.frequency.setValueAtTime(3500, audioCtx.currentTime);
+            trebleFilter.gain.setValueAtTime(0, audioCtx.currentTime);
+
+            // Connect filter graph chain: Bass -> Mid -> Treble -> MasterGain -> Destination
+            bassFilter.connect(midFilter);
+            midFilter.connect(trebleFilter);
+            trebleFilter.connect(masterGainNode);
+            masterGainNode.connect(audioCtx.destination);
+        }
+
+        function setupKeyboardShortcuts() {
+            window.addEventListener('keydown', (e) => {
+                const activeTag = document.activeElement?.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    togglePlayback();
+                } else if (e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    splitAudioAtPlayhead();
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    returnToStart();
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    stepSeek(-1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    stepSeek(1);
+                }
+            });
+        }
+
+        /* =========================================================================
+           2. SYNTHESIZED DEMO AUDIO BUFFER GENERATION
+           ========================================================================= */
+        function createDefaultSynthesizedTrack() {
+            // Generate a 12-second rich Lo-Fi melodic groove in memory
+            const sampleRate = audioCtx.sampleRate;
+            const length = sampleRate * 12;
+            audioBuffer = audioCtx.createBuffer(2, length, sampleRate);
+
+            const leftChannel = audioBuffer.getChannelData(0);
+            const rightChannel = audioBuffer.getChannelData(1);
+
+            // Populate with warm chill chords & soft beat transients
+            for (let i = 0; i < length; i++) {
+                const t = i / sampleRate;
+                // Bass pulse every 1 second
+                const kick = Math.sin(2 * Math.PI * 55 * t) * Math.exp(-(t % 1) * 6);
+                // Warm chord melody
+                const chord = (Math.sin(2 * Math.PI * 261.63 * t) + Math.sin(2 * Math.PI * 329.63 * t)) * 0.15;
+                // Subtle vinyl hiss
+                const hiss = (Math.random() * 2 - 1) * 0.015;
+
+                const val = (kick * 0.4) + chord + hiss;
+                leftChannel[i] = val;
+                rightChannel[i] = val * 0.95;
+            }
+
+            totalDuration = 12.0;
+            updateDurationUI();
+            drawWaveform();
+        }
+
+        function loadSampleVoiceNote() {
+            if (isPlaying) togglePlayback();
+            const sampleRate = audioCtx.sampleRate;
+            const length = sampleRate * 8;
+            audioBuffer = audioCtx.createBuffer(1, length, sampleRate);
+            const channel = audioBuffer.getChannelData(0);
+
+            // Simulate vocal formants with FM modulation
+            for (let i = 0; i < length; i++) {
+                const t = i / sampleRate;
+                const env = Math.sin(2 * Math.PI * 0.3 * t) > 0 ? 1 : 0.2;
+                channel[i] = Math.sin(2 * Math.PI * 220 * t + Math.sin(2 * Math.PI * 8 * t)) * 0.3 * env;
+            }
+
+            totalDuration = 8.0;
+            trackTitle = 'Podcast_Voiceover_Note';
+            document.getElementById('trackTitleInput').value = trackTitle;
+            updateDurationUI();
+            drawWaveform();
+            showToast('Loaded demo vocal track!');
+        }
+
+        /* =========================================================================
+           3. PLAYBACK ENGINE & TRANSPORT
+           ========================================================================= */
+        function togglePlayback() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            isPlaying = !isPlaying;
+            const icon = document.getElementById('mainPlayIcon');
+
+            if (isPlaying) {
+                icon.className = 'fa-solid fa-pause text-base';
+                startAudioPlayback();
+                playbackTicker = setInterval(tickPlayback, 50);
+            } else {
+                icon.className = 'fa-solid fa-play text-base ml-0.5';
+                stopAudioPlayback();
+                clearInterval(playbackTicker);
+            }
+        }
+
+        function startAudioPlayback() {
+            if (!audioBuffer) return;
+            stopAudioPlayback();
+
+            activeSourceNode = audioCtx.createBufferSource();
+            activeSourceNode.buffer = audioBuffer;
+            activeSourceNode.playbackRate.setValueAtTime(playbackRate, audioCtx.currentTime);
+            activeSourceNode.loop = isLooping;
+
+            // Connect to Bass Filter input of our chain
+            activeSourceNode.connect(bassFilter);
+
+            const offset = Math.max(0, Math.min(totalDuration, currentTime));
+            activeSourceNode.start(0, offset);
+
+            activeSourceNode.onended = () => {
+                if (!isLooping && isPlaying) {
+                    togglePlayback();
+                    returnToStart();
+                }
+            };
+        }
+
+        function stopAudioPlayback() {
+            if (activeSourceNode) {
+                try {
+                    activeSourceNode.stop();
+                    activeSourceNode.disconnect();
+                } catch (e) {}
+                activeSourceNode = null;
+            }
+        }
+
+        function tickPlayback() {
+            currentTime += 0.05 * playbackRate;
+            if (currentTime >= totalDuration) {
+                if (isLooping) {
+                    currentTime = 0;
+                } else {
+                    currentTime = totalDuration;
+                    togglePlayback();
+                }
+            }
+            updatePlayhead();
+            updateTimecodeDisplays();
+        }
+
+        function returnToStart() {
+            currentTime = 0;
+            if (isPlaying) startAudioPlayback();
+            updatePlayhead();
+            updateTimecodeDisplays();
+        }
+
+        function stepSeek(deltaSeconds) {
+            currentTime = Math.max(0, Math.min(totalDuration, currentTime + deltaSeconds));
+            if (isPlaying) startAudioPlayback();
+            updatePlayhead();
+            updateTimecodeDisplays();
+        }
+
+        function toggleLoopMode() {
+            isLooping = !isLooping;
+            const btn = document.getElementById('loopToggleBtn');
+            btn.className = `px-3 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${isLooping ? 'bg-emerald-950 text-daw-green border-emerald-600/60 font-bold' : 'border-daw-border text-slate-400 hover:text-white'}`;
+            if (activeSourceNode) activeSourceNode.loop = isLooping;
+            showToast(`Loop mode ${isLooping ? 'enabled' : 'disabled'}`);
+        }
+
+        function setPlaybackSpeed(speed) {
+            playbackRate = speed;
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.className = 'speed-btn px-2 py-1 rounded bg-daw-panel hover:bg-daw-border text-slate-400';
+            });
+            event.target.className = 'speed-btn px-2 py-1 rounded bg-emerald-950 text-daw-green border border-emerald-700/60 font-bold';
+            if (activeSourceNode) {
+                activeSourceNode.playbackRate.setValueAtTime(playbackRate, audioCtx.currentTime);
+            }
+            showToast(`Speed set to ${speed}x`);
+        }
+
+        /* =========================================================================
+           4. WAVEFORM VISUALIZER (CANVAS)
+           ========================================================================= */
+        function drawWaveform() {
+            const canvas = document.getElementById('waveformCanvas');
+            if (!canvas || !audioBuffer) return;
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = canvas.parentElement.clientWidth * 2;
+            canvas.height = canvas.parentElement.clientHeight * 2;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const data = audioBuffer.getChannelData(0);
+            const step = Math.ceil(data.length / width);
+            const amp = height / 2;
+
+            // Draw center reference guide
+            ctx.strokeStyle = '#272736';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, amp);
+            ctx.lineTo(width, amp);
+            ctx.stroke();
+
+            // Gradient for waveform bars
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            grad.addColorStop(0, '#06b6d4');
+            grad.addColorStop(0.5, '#10b981');
+            grad.addColorStop(1, '#06b6d4');
+
+            ctx.fillStyle = grad;
+
+            for (let i = 0; i < width; i += 2) {
+                let min = 1.0;
+                let max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const datum = data[(i * step) + j] || 0;
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                const barHeight = Math.max(4, (max - min) * amp * 0.95);
+                ctx.fillRect(i, amp - (barHeight / 2), 2.5, barHeight);
+            }
+        }
+
+        function updatePlayhead() {
+            const needle = document.getElementById('playheadNeedle');
+            const posPx = currentTime * pixelsPerSecond;
+            needle.style.left = `${posPx}px`;
+        }
+
+        function renderTimeRuler() {
+            const container = document.getElementById('timeRulerContainer');
+            const totalSec = Math.ceil(totalDuration) + 4;
+            let html = '';
+
+            for (let s = 0; s <= totalSec; s++) {
+                const left = s * pixelsPerSecond;
+                html += `
+                    <div class="absolute bottom-0 h-3 border-l border-slate-700" style="left:${left}px;">
+                        <span class="absolute -top-3.5 -left-2 text-[9px] font-mono text-slate-500">${s}s</span>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateWaveformZoom(val) {
+            pixelsPerSecond = parseInt(val) || 80;
+            document.getElementById('waveformStripInner').style.width = `${Math.max(1200, (totalDuration + 5) * pixelsPerSecond)}px`;
+            renderTimeRuler();
+            updatePlayhead();
+            drawWaveform();
+        }
+
+        function handleWaveformClick(e) {
+            if (e.target.classList.contains('playhead-handle')) return;
+            const viewport = document.getElementById('waveformViewport');
+            const rect = viewport.getBoundingClientRect();
+            const clickX = e.clientX - rect.left + viewport.scrollLeft;
+
+            currentTime = Math.max(0, Math.min(totalDuration, clickX / pixelsPerSecond));
+            if (isPlaying) startAudioPlayback();
+            updatePlayhead();
+            updateTimecodeDisplays();
+        }
+
+        function initPlayheadDrag(e) {
+            e.stopPropagation();
+            const viewport = document.getElementById('waveformViewport');
+
+            function onMouseMove(ev) {
+                const rect = viewport.getBoundingClientRect();
+                const x = ev.clientX - rect.left + viewport.scrollLeft;
+                currentTime = Math.max(0, Math.min(totalDuration, x / pixelsPerSecond));
+                updatePlayhead();
+                updateTimecodeDisplays();
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                if (isPlaying) startAudioPlayback();
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        function updateTimecodeDisplays() {
+            const format = (sec) => {
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60);
+                const ms = Math.floor((sec % 1) * 100);
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+            };
+            document.getElementById('currentTimecodeDisplay').textContent = format(currentTime);
+            document.getElementById('totalDurationDisplay').textContent = format(totalDuration);
+        }
+
+        function updateDurationUI() {
+            document.getElementById('waveformStripInner').style.width = `${Math.max(1200, (totalDuration + 5) * pixelsPerSecond)}px`;
+            renderTimeRuler();
+            updateTimecodeDisplays();
+        }
+
+        /* =========================================================================
+           5. ✂️ SPLIT, TRIM & FADE ACTIONS
+           ========================================================================= */
+        function splitAudioAtPlayhead() {
+            if (!audioBuffer) return;
+            if (currentTime <= 0.1 || currentTime >= totalDuration - 0.1) {
+                showToast('Position playhead inside the audio track to split', 'error');
+                return;
+            }
+
+            const sampleRate = audioBuffer.sampleRate;
+            const splitSample = Math.floor(currentTime * sampleRate);
+
+            // Re-allocate trimmed second half
+            const remainingSamples = audioBuffer.length - splitSample;
+            const newBuffer = audioCtx.createBuffer(audioBuffer.numberOfChannels, remainingSamples, sampleRate);
+
+            for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+                const oldChannel = audioBuffer.getChannelData(c);
+                const newChannel = newBuffer.getChannelData(c);
+                for (let i = 0; i < remainingSamples; i++) {
+                    newChannel[i] = oldChannel[splitSample + i];
+                }
+            }
+
+            audioBuffer = newBuffer;
+            totalDuration = newBuffer.duration;
+            currentTime = 0;
+
+            if (isPlaying) startAudioPlayback();
+            updateDurationUI();
+            drawWaveform();
+            showToast('✂️ Track split at playhead successfully!');
+        }
+
+        function trimSelectedClip() {
+            if (!audioBuffer) return;
+            // Trim first 30% and keep remaining
+            const sampleRate = audioBuffer.sampleRate;
+            const trimStart = Math.floor(currentTime * sampleRate);
+            const remaining = audioBuffer.length - trimStart;
+
+            if (remaining <= sampleRate * 1) {
+                showToast('Clip too short to trim further', 'error');
+                return;
+            }
+
+            const newBuffer = audioCtx.createBuffer(audioBuffer.numberOfChannels, remaining, sampleRate);
+            for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+                const oldCh = audioBuffer.getChannelData(c);
+                const newCh = newBuffer.getChannelData(c);
+                for (let i = 0; i < remaining; i++) {
+                    newCh[i] = oldCh[trimStart + i];
+                }
+            }
+
+            audioBuffer = newBuffer;
+            totalDuration = newBuffer.duration;
+            currentTime = 0;
+            if (isPlaying) startAudioPlayback();
+            updateDurationUI();
+            drawWaveform();
+            showToast('Trimmed track to current playhead!');
+        }
+
+        function applyFadeEffect(type) {
+            if (!audioBuffer) return;
+            const sampleRate = audioBuffer.sampleRate;
+            const fadeLength = Math.min(audioBuffer.length, sampleRate * 1.5); // 1.5s fade
+
+            for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+                const channel = audioBuffer.getChannelData(c);
+                if (type === 'in') {
+                    for (let i = 0; i < fadeLength; i++) {
+                        channel[i] *= (i / fadeLength);
+                    }
+                } else {
+                    const startIdx = audioBuffer.length - fadeLength;
+                    for (let i = 0; i < fadeLength; i++) {
+                        channel[startIdx + i] *= (1 - (i / fadeLength));
+                    }
+                }
+            }
+
+            drawWaveform();
+            showToast(`Applied Fade ${type.toUpperCase()}!`);
+        }
+
+        /* =========================================================================
+           6. MICROPHONE RECORDING ENGINE
+           ========================================================================= */
+        async function toggleMicrophoneRecord() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    recordedChunks = [];
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) recordedChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                        const arrayBuffer = await blob.arrayBuffer();
+                        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                        totalDuration = audioBuffer.duration;
+                        currentTime = 0;
+                        updateDurationUI();
+                        drawWaveform();
+                        showToast('Voice recording processed & loaded!');
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('recordingStatusBadge').classList.remove('hidden');
+                    document.getElementById('recordBtnText').textContent = 'Stop Recording';
+                    document.getElementById('micRecordBtn').className = 'flex-1 py-2.5 rounded-xl bg-slate-800 text-rose-400 border border-rose-500/50 font-bold text-xs shadow-md transition flex items-center justify-center gap-2';
+                } catch (err) {
+                    showToast('Microphone access denied or unavailable', 'error');
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                }
+                isRecording = false;
+                document.getElementById('recordingStatusBadge').classList.add('hidden');
+                document.getElementById('recordBtnText').textContent = 'Record Voice';
+                document.getElementById('micRecordBtn').className = 'flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2';
+            }
+        }
+
+        /* =========================================================================
+           7. SOUNDBOARD SYNTHESIZERS (ZERO EXTERNAL URLS)
+           ========================================================================= */
+        function triggerSoundFx(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            if (type === 'bass') {
+                // 808 Sub Pitch Drop
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.6);
+                gain.gain.setValueAtTime(0.7, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.connect(gain);
+                gain.connect(bassFilter);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            } else if (type === 'whoosh') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.35);
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(bassFilter);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'riser') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 1.2);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0.25, now + 1.0);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
+                osc.connect(gain);
+                gain.connect(bassFilter);
+                osc.start(now);
+                osc.stop(now + 1.25);
+            } else {
+                // Lo-Fi Beat Chord
+                const chords = [261.63, 329.63, 392.0];
+                chords.forEach(freq => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.9);
+                    osc.connect(gain);
+                    gain.connect(bassFilter);
+                    osc.start(now);
+                    osc.stop(now + 0.9);
+                });
+            }
+            showToast(`Triggered sound effect: ${type.toUpperCase()}`);
+        }
+
+        /* =========================================================================
+           8. MASTER EQUALIZER & GAIN CONTROLS
+           ========================================================================= */
+        function updateEQ(band, dbValue) {
+            const db = parseFloat(dbValue);
+            if (band === 'bass') {
+                bassFilter.gain.setValueAtTime(db, audioCtx.currentTime);
+                document.getElementById('bassGainDisplay').textContent = `${db > 0 ? '+' : ''}${db} dB`;
+            } else if (band === 'mid') {
+                midFilter.gain.setValueAtTime(db, audioCtx.currentTime);
+                document.getElementById('midGainDisplay').textContent = `${db > 0 ? '+' : ''}${db} dB`;
+            } else if (band === 'treble') {
+                trebleFilter.gain.setValueAtTime(db, audioCtx.currentTime);
+                document.getElementById('trebleGainDisplay').textContent = `${db > 0 ? '+' : ''}${db} dB`;
+            }
+        }
+
+        function resetEqualizer() {
+            ['bass', 'mid', 'treble'].forEach(b => {
+                updateEQ(b, 0);
+                const el = document.getElementById(`eq${b.charAt(0).toUpperCase() + b.slice(1)}`);
+                if (el) el.value = 0;
+            });
+            showToast('Reset EQ filters to 0 dB');
+        }
+
+        function updateMasterVolume(val) {
+            const pct = parseInt(val) || 100;
+            const gain = pct / 100;
+            masterGainNode.gain.setValueAtTime(gain, audioCtx.currentTime);
+            document.getElementById('masterVolumeDisplay').textContent = `${pct}%`;
+        }
+
+        /* =========================================================================
+           9. AUDIO IMPORT & WAV EXPORT
+           ========================================================================= */
+        async function handleAudioUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showToast(`Decoding "${file.name}"...`);
+            const arrayBuffer = await file.arrayBuffer();
+            try {
+                audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                totalDuration = audioBuffer.duration;
+                currentTime = 0;
+                trackTitle = file.name.replace(/\.[^/.]+$/, "");
+                document.getElementById('trackTitleInput').value = trackTitle;
+                updateDurationUI();
+                drawWaveform();
+                showToast(`Imported "${file.name}"!`, 'success');
+            } catch (err) {
+                showToast('Failed to decode audio file', 'error');
+            }
+        }
+
+        function exportAudioWAV() {
+            if (!audioBuffer) return;
+            showToast('Encoding studio master WAV file...');
+
+            // Encode AudioBuffer into standard 16-bit PCM WAV container
+            const wavBlob = audioBufferToWavBlob(audioBuffer);
+            const url = URL.createObjectURL(wavBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${trackTitle.replace(/\s+/g, '_')}_Master.wav`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('WAV master downloaded successfully!', 'success');
+        }
+
+        function audioBufferToWavBlob(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const dataLength = buffer.length * blockAlign;
+            const bufferLength = 44 + dataLength;
+
+            const arrayBuffer = new ArrayBuffer(bufferLength);
+            const view = new DataView(arrayBuffer);
+
+            function writeString(offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            // RIFF header
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataLength, true);
+            writeString(8, 'WAVE');
+
+            // fmt chunk
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+
+            // data chunk
+            writeString(36, 'data');
+            view.setUint32(40, dataLength, true);
+
+            // Interleave samples
+            let offset = 44;
+            for (let i = 0; i < buffer.length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    let sample = buffer.getChannelData(channel)[i];
+                    sample = Math.max(-1, Math.min(1, sample));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function updateTrackTitle(val) {
+            trackTitle = val.trim() || 'Mastering_Session_01';
+            showToast('Track title saved');
+        }
+
+        /* =========================================================================
+           10. TOAST NOTIFICATIONS & UTILS
+           ========================================================================= */
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold text-white flex items-center gap-2 transition ${type === 'error' ? 'bg-rose-600' : 'bg-slate-900 border border-slate-700'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation text-rose-300' : 'fa-circle-check text-daw-green'}"></i><span>${escapeHtml(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 250);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.onload = initAudioStudio;
+    </script>
+</body>
+</html>
